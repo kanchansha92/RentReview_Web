@@ -1,0 +1,26 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Required build-time environment variables (Site settings -> Environment
+# variables in the Netlify dashboard, or `netlify env:set`):
+#   VITE_SITE_URL      https://rentreview.in -see src/config/site.js
+#   VITE_API_BASE_URL  https://api.rentreview.in/api (production backend)
+#   SITEMAP_API_URL    same as VITE_API_BASE_URL -read by
+#                       scripts/generate-sitemap.js, which `npm run build`
+#                       now runs before `vite build`. Without it, the build
+#                       still succeeds but sitemap.xml only lists the static
+#                       pages, not individual property pages.
+
+# Serve index.html for all routes so the SPA router handles them. Trade-off:
+# a genuinely bad URL (e.g. /property/does-not-exist) gets HTTP 200 with the
+# NotFound page's content instead of a real 404 status -there's no server
+# rendering here to make the status code match the content. NotFound.jsx sets
+# <meta name="robots" content="noindex, nofollow"> to keep Google from
+# indexing those soft-404s; this doesn't fully replace a true 404 (some tools
+# still flag it as a soft-404 pattern) but it keeps the URLs out of search
+# results, which is what matters here.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

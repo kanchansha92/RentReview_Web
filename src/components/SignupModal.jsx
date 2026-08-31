@@ -1,0 +1,343 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, X, Loader2, Home, User } from 'lucide-react';
+import { BASE_URL } from '../constants';
+import { useDialogA11y } from './LoginModal';
+
+const SignupModal = ({ onClose, onSuccess, onSwitchToLogin }) => {
+    const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
+    const dialogRef = useRef(null);
+
+    // Scroll lock (restoring the previous value) + focus trap + focus restore
+    useDialogA11y(dialogRef);
+
+    // Close on Escape key
+    useEffect(() => {
+        const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', handleEsc);
+        return () => document.removeEventListener('keydown', handleEsc);
+    }, [onClose]);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setForm((p) => ({ ...p, [name]: value }));
+        if (fieldErrors[name]) setFieldErrors((p) => ({ ...p, [name]: '' }));
+        setError('');
+    };
+
+    const validate = () => {
+        const errs = {};
+        if (!form.name.trim()) errs.name = 'Full name is required.';
+        if (!form.email.trim()) errs.email = 'Email is required.';
+        else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Enter a valid email.';
+        if (!form.password) errs.password = 'Password is required.';
+        else if (form.password.length < 6) errs.password = 'Password must be at least 6 characters.';
+        if (!form.confirmPassword) errs.confirmPassword = 'Confirm password is required.';
+        else if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match.';
+        return errs;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        const errs = validate();
+        if (Object.keys(errs).length) { setFieldErrors(errs); return; }
+
+        setLoading(true);
+        try {
+            const res = await fetch(`${BASE_URL}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: form.name.trim(),
+                    email: form.email.trim(),
+                    password: form.password,
+                }),
+            });
+            // A Render cold start answers with an HTML 502, and res.json() would throw
+            // there -falling into the generic catch and telling the user the server
+            // is unreachable when it is merely waking up. Degrade to {} so the real
+            // status code below decides the message.
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                // A 5xx with no JSON body is almost always a cold start, not a
+                // fault the user can do anything about except wait a moment.
+                setError(
+                    data.message ||
+                    (res.status >= 500
+                        ? 'The server is waking up. Please try again in a moment.'
+                        : 'Something went wrong.')
+                );
+                return;
+            }
+
+            onSuccess?.(data.user, data.token);
+            onClose();
+        } catch {
+            setError('Unable to connect to the server. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4"
+            style={{ backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div
+                ref={dialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="signup-modal-title"
+                aria-describedby="signup-modal-desc"
+                className="relative w-full max-w-[420px] max-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-2xl bg-white shadow-[0_32px_64px_-12px_rgba(0,0,0,0.35)] animate-[modalIn_0.2s_ease-out]"
+            >
+                {/* Close button */}
+                <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Close signup dialog"
+                    className="absolute right-3 top-3 z-10 text-slate-400 hover:text-slate-600 transition-colors rounded-lg p-1 hover:bg-slate-100"
+                >
+                    <X className="w-5 h-5" aria-hidden="true" />
+                </button>
+
+                <div className="flex flex-col items-center gap-3.5 sm:gap-4 px-5 pt-6 pb-5 sm:px-7 sm:pt-7">
+                    {/* Decorative icon */}
+                    <div
+                        aria-hidden="true"
+                        className="flex h-11 w-11 items-center justify-center rounded-full bg-[#41B985] shadow-lg shadow-emerald-100"
+                    >
+                        <Home className="w-5 h-5 text-white" />
+                    </div>
+
+                    {/* Heading */}
+                    <div className="text-center">
+                        <h2 id="signup-modal-title" className="text-xl font-bold text-[#0A0A0A] tracking-tight">
+                            Create an Account
+                        </h2>
+                        <p id="signup-modal-desc" className="mt-0.5 text-xs sm:text-sm text-[#717182]">
+                            Join the community of informed renters
+                        </p>
+                    </div>
+
+                    {/* Error banner */}
+                    {error && (
+                        <div
+                            role="alert"
+                            className="w-full flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2"
+                        >
+                            <span aria-hidden="true" className="mt-0.5 shrink-0">⚠</span>
+                            <span>{error}</span>
+                        </div>
+                    )}
+
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} noValidate className="w-full flex flex-col gap-2.5 sm:gap-3">
+                        {/* Name */}
+                        <div className="flex flex-col gap-1">
+                            <label htmlFor="modal-name" className="text-sm font-medium text-[#0A0A0A]">Full Name</label>
+                            <div className="relative">
+                                <User aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#99A1AF] pointer-events-none" />
+                                <input
+                                    id="modal-name"
+                                    name="name"
+                                    type="text"
+                                    autoComplete="name"
+                                    autoFocus
+                                    placeholder="John Doe"
+                                    value={form.name}
+                                    onChange={handleChange}
+                                    aria-invalid={!!fieldErrors.name}
+                                    aria-describedby={fieldErrors.name ? 'modal-name-error' : undefined}
+                                    className={`w-full bg-[#F3F3F5] rounded-lg py-2 pl-10 pr-4 text-sm text-[#0A0A0A] placeholder-[#717182] focus:ring-2 outline-none transition-all border ${fieldErrors.name ? 'border-red-400 focus:ring-red-300' : 'border-transparent focus:ring-[#41B985]'}`}
+                                />
+                            </div>
+                            {fieldErrors.name && (
+                                <p id="modal-name-error" className="text-xs text-red-500">{fieldErrors.name}</p>
+                            )}
+                        </div>
+
+                        {/* Email */}
+                        <div className="flex flex-col gap-1">
+                            <label htmlFor="modal-email" className="text-sm font-medium text-[#0A0A0A]">Email</label>
+                            <div className="relative">
+                                <Mail aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#99A1AF] pointer-events-none" />
+                                <input
+                                    id="modal-email"
+                                    name="email"
+                                    type="email"
+                                    autoComplete="email"
+                                    placeholder="you@example.com"
+                                    value={form.email}
+                                    onChange={handleChange}
+                                    aria-invalid={!!fieldErrors.email}
+                                    aria-describedby={fieldErrors.email ? 'modal-email-error' : undefined}
+                                    className={`w-full bg-[#F3F3F5] rounded-lg py-2 pl-10 pr-4 text-sm text-[#0A0A0A] placeholder-[#717182] focus:ring-2 outline-none transition-all border ${fieldErrors.email ? 'border-red-400 focus:ring-red-300' : 'border-transparent focus:ring-[#41B985]'}`}
+                                />
+                            </div>
+                            {fieldErrors.email && (
+                                <p id="modal-email-error" className="text-xs text-red-500">{fieldErrors.email}</p>
+                            )}
+                        </div>
+
+                        {/* Password */}
+                        <div className="flex flex-col gap-1">
+                            <label htmlFor="modal-password" className="text-sm font-medium text-[#0A0A0A]">Password</label>
+                            <div className="relative">
+                                <Lock aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#99A1AF] pointer-events-none" />
+                                <input
+                                    id="modal-password"
+                                    name="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    autoComplete="new-password"
+                                    placeholder="••••••••"
+                                    value={form.password}
+                                    onChange={handleChange}
+                                    aria-invalid={!!fieldErrors.password}
+                                    aria-describedby={fieldErrors.password ? 'modal-password-error' : undefined}
+                                    className={`w-full bg-[#F3F3F5] rounded-lg py-2 pl-10 pr-10 text-sm text-[#0A0A0A] placeholder-[#717182] focus:ring-2 outline-none transition-all border ${fieldErrors.password ? 'border-red-400 focus:ring-red-300' : 'border-transparent focus:ring-[#41B985]'}`}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                    aria-pressed={showPassword}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#99A1AF] hover:text-[#717182] transition-colors"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
+                                </button>
+                            </div>
+                            {fieldErrors.password && (
+                                <p id="modal-password-error" className="text-xs text-red-500">{fieldErrors.password}</p>
+                            )}
+                        </div>
+
+                        {/* Confirm Password -now has show/hide toggle */}
+                        <div className="flex flex-col gap-1">
+                            <label htmlFor="modal-confirm-password" className="text-sm font-medium text-[#0A0A0A]">Confirm Password</label>
+                            <div className="relative">
+                                <Lock aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#99A1AF] pointer-events-none" />
+                                <input
+                                    id="modal-confirm-password"
+                                    name="confirmPassword"
+                                    type={showConfirmPassword ? 'text' : 'password'}
+                                    autoComplete="new-password"
+                                    placeholder="••••••••"
+                                    value={form.confirmPassword}
+                                    onChange={handleChange}
+                                    aria-invalid={!!fieldErrors.confirmPassword}
+                                    aria-describedby={fieldErrors.confirmPassword ? 'modal-confirm-error' : undefined}
+                                    className={`w-full bg-[#F3F3F5] rounded-lg py-2 pl-10 pr-10 text-sm text-[#0A0A0A] placeholder-[#717182] focus:ring-2 outline-none transition-all border ${fieldErrors.confirmPassword ? 'border-red-400 focus:ring-red-300' : 'border-transparent focus:ring-[#41B985]'}`}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                                    aria-pressed={showConfirmPassword}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#99A1AF] hover:text-[#717182] transition-colors"
+                                >
+                                    {showConfirmPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
+                                </button>
+                            </div>
+                            {fieldErrors.confirmPassword && (
+                                <p id="modal-confirm-error" className="text-xs text-red-500">{fieldErrors.confirmPassword}</p>
+                            )}
+                        </div>
+
+                        {/* Submit */}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-[#41B985] cursor-pointer hover:bg-[#36a374] active:bg-[#2d9062] disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all shadow-[0_4px_14px_0_rgba(65,185,133,0.35)] mt-0.5"
+                        >
+                            {loading ? (
+                                <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Creating Account…</>
+                            ) : 'Create Account'}
+                        </button>
+                    </form>
+
+                    {/* OR divider */}
+                    <div className="w-full flex items-center gap-3" role="separator" aria-label="Or continue with Google">
+                        <div aria-hidden="true" className="flex-1 border-t border-slate-200" />
+                        <span aria-hidden="true" className="text-xs text-[#6A7282]">OR</span>
+                        <div aria-hidden="true" className="flex-1 border-t border-slate-200" />
+                    </div>
+
+                    {/* Google */}
+                    <button
+                        type="button"
+                        onClick={() => window.location.href = `${BASE_URL}/auth/google`}
+                        aria-label="Continue with Google"
+                        className="w-full flex items-center cursor-pointer justify-center gap-2.5 border border-slate-200 rounded-lg py-2 text-sm font-medium text-[#0A0A0A] hover:bg-slate-50 transition-colors"
+                    >
+                        <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                        </svg>
+                        Continue with Google
+                    </button>
+
+                    {/* Sign in link */}
+                    <p className="text-xs sm:text-sm text-[#4A5565]">
+                        Already have an account?{' '}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                // A switch is not a dismissal -see LoginModal.
+                                if (onSwitchToLogin) onSwitchToLogin();
+                                else onClose();
+                            }}
+                            className="text-[#41B985] font-semibold hover:underline cursor-pointer"
+                        >
+                            Sign In
+                        </button>
+                    </p>
+
+                    {/* Disclaimer -real Links instead of href="#" */}
+                    <p className="text-center text-[11px] text-[#717182] px-4 leading-snug">
+                        By creating an account, you agree to our{' '}
+                        <Link
+                            to="/terms"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        
+                            className="underline hover:text-slate-900"
+                        >
+                            Terms of Service
+                        </Link>
+                        {' '}and{' '}
+                        <Link
+                            to="/privacy"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          
+                            className="underline hover:text-slate-900"
+                        >
+                            Privacy Policy
+                        </Link>
+                        .
+                    </p>
+                </div>
+            </div>
+
+            <style>{`
+                @keyframes modalIn {
+                    from { opacity: 0; transform: scale(0.95) translateY(8px); }
+                    to   { opacity: 1; transform: scale(1)    translateY(0); }
+                }
+            `}</style>
+        </div>
+    );
+};
+
+export default SignupModal;

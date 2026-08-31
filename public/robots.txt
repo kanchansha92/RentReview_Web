@@ -1,0 +1,21 @@
+# https://rentreview.in/robots.txt
+User-agent: *
+Allow: /
+
+# Private / account / transactional pages - no public content, and each one
+# also sets <meta name="robots" content="noindex..."> itself (see each page's
+# useSeo call) so a URL that leaks in from somewhere else still won't get
+# indexed. Disallowing them here additionally keeps crawlers from spending
+# budget on pages that always require a signed-in session.
+Disallow: /signin
+Disallow: /signup
+Disallow: /add-review
+Disallow: /profile
+Disallow: /settings
+Disallow: /my-reviews
+Disallow: /auth-success
+Disallow: /reset-password/
+Disallow: /verify-email/
+Disallow: /admin/
+
+Sitemap: https://rentreview.in/sitemap.xml
