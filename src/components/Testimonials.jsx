@@ -1,4 +1,5 @@
 import React from 'react';
+import { Reveal, Stagger, StaggerItem, motion, fadeUp } from '../animations';
 
 const TESTIMONIALS = [
   {
@@ -57,7 +58,7 @@ const Testimonials = () => {
     >
       <div className="mx-auto max-w-7xl">
         {/* Section header */}
-        <header className="mb-10 text-center sm:mb-12 lg:mb-16">
+        <Reveal as="header" className="mb-10 text-center sm:mb-12 lg:mb-16">
           <h2
             id="testimonials-heading"
             className="text-2xl font-bold tracking-tight text-[#101828] sm:text-3xl lg:text-4xl"
@@ -67,25 +68,41 @@ const Testimonials = () => {
           <p className="mx-auto mt-3 max-w-2xl text-base text-[#4A5565] sm:mt-4 sm:text-lg lg:text-xl">
             Real stories from real renters who found their perfect home
           </p>
-        </header>
+        </Reveal>
 
         {/* Testimonials -semantic list of blockquotes */}
-        <ul className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3 lg:gap-8">
+        <Stagger as="ul" stagger={0.12} className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3 lg:gap-8">
           {TESTIMONIALS.map((t) => (
-            <li key={t.id} className="h-full">
-              <figure
-                className="flex h-full flex-col rounded-[14px] bg-white p-5 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.08),0px_4px_6px_-4px_rgba(0,0,0,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0px_15px_25px_-3px_rgba(0,0,0,0.12),0px_6px_10px_-4px_rgba(0,0,0,0.1)] sm:p-6"
+            <StaggerItem as="li" key={t.id} variants={fadeUp} className="h-full">
+              {/* The hover lift moved from a CSS transform to whileHover so it
+                  shares the card's transform track with the entrance animation
+                  -a Tailwind hover:-translate-y-1 would fight Motion for it. */}
+              <motion.figure
+                whileHover={{ y: -6 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                className="flex h-full flex-col rounded-[14px] bg-white p-5 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.08),0px_4px_6px_-4px_rgba(0,0,0,0.08)] transition-shadow duration-300 hover:shadow-[0px_15px_25px_-3px_rgba(0,0,0,0.12),0px_6px_10px_-4px_rgba(0,0,0,0.1)] sm:p-6"
               >
-                {/* Rating -accessible to screen readers as a single statement */}
-                <div
+                {/* Rating -accessible to screen readers as a single statement.
+                    Stars pop in one by one once the card has landed. */}
+                <motion.div
                   role="img"
                   aria-label={`Rated ${t.rating} out of 5 stars`}
                   className="mb-4 flex gap-0.5 sm:mb-5 sm:gap-1 lg:mb-6"
+                  variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.15 } } }}
                 >
                   {[...Array(t.rating)].map((_, i) => (
-                    <StarIcon key={i} />
+                    <motion.span
+                      key={i}
+                      className="inline-flex"
+                      variants={{
+                        hidden: { opacity: 0, scale: 0.4 },
+                        show: { opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 400, damping: 16 } },
+                      }}
+                    >
+                      <StarIcon />
+                    </motion.span>
                   ))}
-                </div>
+                </motion.div>
 
                 {/* The actual quote -semantic <blockquote> */}
                 <blockquote className="flex-grow">
@@ -113,10 +130,10 @@ const Testimonials = () => {
                     </p>
                   </div>
                 </figcaption>
-              </figure>
-            </li>
+              </motion.figure>
+            </StaggerItem>
           ))}
-        </ul>
+        </Stagger>
       </div>
     </section>
   );

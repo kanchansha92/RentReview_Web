@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import ReviewNavbar from '../components/ReviewNavbar';
 import useSeo from '../hooks/useSeo';
+import { Reveal, Stagger, StaggerItem, fadeUp } from '../animations';
 
 const MyReviews = () => {
   const navigate = useNavigate();
@@ -172,7 +173,7 @@ const MyReviews = () => {
           </button>
 
           {/* Page Header & Stats Summary */}
-          <header className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16 lg:mb-20 items-end">
+          <Reveal as="header" className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16 lg:mb-20 items-end">
             <div className="md:col-span-2 space-y-3 sm:space-y-4">
               <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-1.5 bg-emerald-50 text-[#3EB489] rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest border border-emerald-100/50">
                 <Layers size={12} aria-hidden="true" className="sm:hidden" />
@@ -201,7 +202,7 @@ const MyReviews = () => {
                 <dt className="text-[10px] font-black text-emerald-100 uppercase tracking-widest mt-0.5 sm:mt-1">Avg Score</dt>
               </div>
             </dl>
-          </header>
+          </Reveal>
 
           {/* Timeline of Reviews */}
           <section aria-label="Your reviews" className="relative space-y-6 sm:space-y-8 lg:space-y-12">
@@ -213,10 +214,11 @@ const MyReviews = () => {
               />
             )}
 
+            {/* Reviews arrive one after another as the timeline scrolls past. */}
             {reviews.length > 0 ? (
-              <ul className="list-none space-y-6 sm:space-y-8 lg:space-y-12">
+              <Stagger as="ul" stagger={0.1} amount={0.1} className="list-none space-y-6 sm:space-y-8 lg:space-y-12">
                 {reviews.map((rev, index) => (
-                  <li key={rev._id} className="relative group">
+                  <StaggerItem as="li" variants={fadeUp} key={rev._id} className="relative group">
                     {/* Timeline Dot (desktop only) */}
                     <div
                       aria-hidden="true"
@@ -365,9 +367,9 @@ const MyReviews = () => {
                         </div>
                       </div>
                     </article>
-                  </li>
+                  </StaggerItem>
                 ))}
-              </ul>
+              </Stagger>
             ) : (
               <div className="py-16 sm:py-24 lg:py-32 flex flex-col items-center text-center px-4 sm:px-6">
                 <div

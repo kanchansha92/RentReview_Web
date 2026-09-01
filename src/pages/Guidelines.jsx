@@ -6,6 +6,7 @@ import ReviewNavbar from '../components/ReviewNavbar';
 import useSeo from '../hooks/useSeo';
 import { SITE_URL } from '../config/site';
 import { serializeJsonLd } from '../utils/jsonLd';
+import { Reveal, motion } from '../animations';
 
 const DOS = [
   'Share personal, first-hand experiences',
@@ -83,9 +84,16 @@ const Guidelines = () => {
           </nav>
 
           {/* Header */}
-          <header className="text-center mb-10 sm:mb-12 lg:mb-16">
+          <Reveal as="header" className="text-center mb-10 sm:mb-12 lg:mb-16">
             <div className="inline-flex items-center gap-2 mb-4 sm:mb-5">
-              <div aria-hidden="true" className="h-1 w-8 rounded-full bg-[#41B985]" />
+              {/* The brand rule draws itself out from the left. */}
+              <motion.div
+                aria-hidden="true"
+                className="h-1 w-8 origin-left rounded-full bg-[#41B985]"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+              />
               <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] text-[#41B985] uppercase">
                 Community
               </span>
@@ -104,12 +112,12 @@ const Guidelines = () => {
             <p className="text-sm sm:text-base lg:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed px-2">
               Our guidelines ensure that RentReview remains a helpful, safe, and trustworthy community for all renters.
             </p>
-          </header>
+          </Reveal>
 
           {/* Guidelines article */}
           <article>
             {/* ── Core Philosophy ─────────────────────────────────────────── */}
-            <section
+            <Reveal as="section"
               aria-labelledby="philosophy-heading"
               className="bg-slate-900 text-white p-6 sm:p-8 lg:p-12 rounded-2xl sm:rounded-3xl mb-10 sm:mb-12 lg:mb-16 relative overflow-hidden"
             >
@@ -129,12 +137,12 @@ const Guidelines = () => {
                 trust, honesty, and mutual respect. We expect all members to contribute in a way that is helpful
                 to others while maintaining a standard of decorum.
               </p>
-            </section>
+            </Reveal>
 
             {/* ── Dos and Don'ts ──────────────────────────────────────────── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-10 sm:mb-12 lg:mb-16">
               {/* Dos */}
-              <section
+              <Reveal as="section"
                 aria-labelledby="dos-heading"
                 className="bg-emerald-50/50 p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl border border-emerald-100"
               >
@@ -156,10 +164,10 @@ const Guidelines = () => {
                     </li>
                   ))}
                 </ul>
-              </section>
+              </Reveal>
 
               {/* Don'ts */}
-              <section
+              <Reveal as="section"
                 aria-labelledby="donts-heading"
                 className="bg-red-50/50 p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl border border-red-100"
               >
@@ -181,11 +189,11 @@ const Guidelines = () => {
                     </li>
                   ))}
                 </ul>
-              </section>
+              </Reveal>
             </div>
 
             {/* ── Moderation Policy ───────────────────────────────────────── */}
-            <section
+            <Reveal as="section"
               aria-labelledby="moderation-heading"
               className="p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl border border-slate-100 bg-slate-50"
             >
@@ -207,7 +215,7 @@ const Guidelines = () => {
                   action.
                 </p>
               </div>
-            </section>
+            </Reveal>
 
             {/* ── Enforcement note ────────────────────────────────────────── */}
             <aside

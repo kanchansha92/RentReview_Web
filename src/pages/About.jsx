@@ -17,6 +17,7 @@ import ReviewNavbar from '../components/ReviewNavbar';
 import useSeo from '../hooks/useSeo';
 import { SITE_URL, LOGO_URL } from '../config/site';
 import { serializeJsonLd } from '../utils/jsonLd';
+import { Reveal, motion, staggerContainer, fadeUp } from '../animations';
 
 // ── Content ──────────────────────────────────────────────────────────────────
 
@@ -126,34 +127,51 @@ const About = () => {
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
           >
-            <div className="absolute left-[-10%] top-[-10%] h-[300px] w-[300px] rounded-full bg-[#3EB489]/5 blur-[80px] sm:h-[500px] sm:w-[500px] sm:blur-[120px]" />
-            <div className="absolute bottom-[10%] right-[5%] h-[250px] w-[250px] rounded-full bg-blue-50/50 blur-[70px] sm:h-[400px] sm:w-[400px] sm:blur-[100px]" />
+            {/* Drifting on a very long loop -same treatment as the homepage hero. */}
+            <motion.div
+              className="absolute left-[-10%] top-[-10%] h-[300px] w-[300px] rounded-full bg-[#3EB489]/5 blur-[80px] sm:h-[500px] sm:w-[500px] sm:blur-[120px]"
+              animate={{ x: [0, 40, 0], y: [0, 30, 0], scale: [1, 1.08, 1] }}
+              transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <motion.div
+              className="absolute bottom-[10%] right-[5%] h-[250px] w-[250px] rounded-full bg-blue-50/50 blur-[70px] sm:h-[400px] sm:w-[400px] sm:blur-[100px]"
+              animate={{ x: [0, -35, 0], y: [0, -25, 0], scale: [1, 1.1, 1] }}
+              transition={{ duration: 24, repeat: Infinity, ease: 'easeInOut' }}
+            />
           </div>
 
-          <div className="relative z-10 mx-auto max-w-4xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#DCFCE7] px-4 py-1.5 text-xs font-bold text-[#166534] ring-1 ring-inset ring-[#BBF7D0] sm:text-[13px]">
+          {/* Above the fold, so this plays on mount rather than on scroll. */}
+          <motion.div
+            className="relative z-10 mx-auto max-w-4xl text-center"
+            initial="hidden"
+            animate="show"
+            variants={staggerContainer(0.09, 0.05)}
+          >
+            <motion.div variants={fadeUp} className="inline-flex items-center gap-2 rounded-full bg-[#DCFCE7] px-4 py-1.5 text-xs font-bold text-[#166534] ring-1 ring-inset ring-[#BBF7D0] sm:text-[13px]">
               <Sparkles className="h-3.5 w-3.5 text-[#3EB489]" aria-hidden="true" />
               Built by Renters, for Renters
-            </div>
+            </motion.div>
 
-            <h1
+            <motion.h1
+              variants={fadeUp}
               id="about-hero-heading"
               className="mt-6 text-4xl font-black tracking-tight text-[#0F172A] sm:mt-8 sm:text-5xl md:text-6xl lg:text-7xl"
             >
               Renting deserves{' '}
               <br className="hidden sm:block" />
               <span className="text-[#3EB489]">honesty.</span>
-            </h1>
+            </motion.h1>
 
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#475569] sm:mt-6 sm:text-lg lg:text-xl">
+            <motion.p variants={fadeUp} className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#475569] sm:mt-6 sm:text-lg lg:text-xl">
               We're not just a review site. We're a community leveling the playing
               field for tenants everywhere -one verified review at a time.
-            </p>
+            </motion.p>
 
-            <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 sm:mt-10 sm:gap-x-8">
+            <motion.ul variants={staggerContainer(0.07)} className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 sm:mt-10 sm:gap-x-8">
               {HERO_BADGES.map((text) => (
-                <li
+                <motion.li
                   key={text}
+                  variants={fadeUp}
                   className="flex items-center gap-2 text-sm font-bold text-[#475569] sm:text-[15px]"
                 >
                   <span
@@ -163,14 +181,14 @@ const About = () => {
                     <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={3} />
                   </span>
                   {text}
-                </li>
+                </motion.li>
               ))}
-            </ul>
-          </div>
+            </motion.ul>
+          </motion.div>
         </section>
 
         {/* ── Our Story ─────────────────────────────────────────────────── */}
-        <section
+        <Reveal as="section"
           id="our-story"
           aria-labelledby="our-story-heading"
           className="scroll-mt-20 bg-white py-14 sm:py-16 md:py-20 lg:py-24"
@@ -261,13 +279,13 @@ const About = () => {
               </div>
             </div>
           </div>
-        </section>
+        </Reveal>
 
         {/* ── Stats band -matches the homepage's green StatsSection ────── */}
        
 
         {/* ── Core Values ───────────────────────────────────────────────── */}
-        <section
+        <Reveal as="section"
           aria-labelledby="values-heading"
           className="bg-[#F9FAFB] py-12 sm:py-14 md:py-16 lg:py-20 xl:py-24"
         >
@@ -316,10 +334,10 @@ const About = () => {
               })}
             </ul>
           </div>
-        </section>
+        </Reveal>
 
         {/* ── How We're Different ───────────────────────────────────────── */}
-        <section
+        <Reveal as="section"
           aria-labelledby="different-heading"
           className="bg-white py-12 sm:py-14 md:py-16 lg:py-20 xl:py-24"
         >
@@ -363,7 +381,7 @@ const About = () => {
               })}
             </ul>
           </div>
-        </section>
+        </Reveal>
 
      
         <script

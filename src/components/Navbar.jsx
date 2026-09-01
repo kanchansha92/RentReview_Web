@@ -9,6 +9,15 @@ import { logoutSuccess, loginSuccess, selectUser } from '../store/authSlice'
 import { clearReviewData } from '../store/reviewSlice'
 import LoginModal from './LoginModal'
 import SignupModal from './SignupModal'
+import {
+  motion,
+  AnimatePresence,
+  dropdownVariants,
+  sheetVariants,
+  staggerContainer,
+  fadeDown,
+  EASE,
+} from '../animations'
 
 const NAV_LINKS = [
   { href: '#features', label: 'Features' },
@@ -108,33 +117,55 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
+      {/* The bar itself drops in once on first paint. It is sticky, so it only
+          ever plays on the homepage's initial mount -not on every scroll. */}
+      <motion.nav
+        className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-md"
+        initial={{ y: -64, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.45, ease: EASE }}
+      >
+        <motion.div
+          className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8"
+          initial="hidden"
+          animate="show"
+          variants={staggerContainer(0.07, 0.2)}
+        >
           {/* ── Logo ───────────────────────────────────────────────────── */}
-          <Link to="/" className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-90">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#3EB489] text-white shadow-lg shadow-emerald-100 sm:h-10 sm:w-10">
-              <Home className="h-5 w-5 sm:h-[22px] sm:w-[22px]" fill="currentColor" fillOpacity={0.2} />
-            </div>
-            <span className="text-base font-bold tracking-tight text-slate-800 sm:text-xl">
-              Rent<span className="text-[#3EB489]">Review</span>
-            </span>
-          </Link>
+          <motion.div variants={fadeDown} className="shrink-0">
+            <Link to="/" className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-90">
+              <motion.div
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#3EB489] text-white shadow-lg shadow-emerald-100 sm:h-10 sm:w-10"
+                whileHover={{ rotate: -8, scale: 1.06 }}
+                transition={{ type: 'spring', stiffness: 340, damping: 16 }}
+              >
+                <Home className="h-5 w-5 sm:h-[22px] sm:w-[22px]" fill="currentColor" fillOpacity={0.2} />
+              </motion.div>
+              <span className="text-base font-bold tracking-tight text-slate-800 sm:text-xl">
+                Rent<span className="text-[#3EB489]">Review</span>
+              </span>
+            </Link>
+          </motion.div>
 
           {/* ── Desktop nav links (md+) ─────────────────────────────────── */}
           <div className="hidden items-center gap-6 md:flex lg:gap-10">
             {NAV_LINKS.map((link) => (
-              <a
+              /* `group` + a scaleX rule gives each link an underline that wipes
+                 in from the left -cheaper and smoother than animating width. */
+              <motion.a
                 key={link.href}
                 href={link.href}
-                className="text-sm font-semibold text-slate-500 transition-colors hover:text-[#3EB489]"
+                variants={fadeDown}
+                className="group relative text-sm font-semibold text-slate-500 transition-colors hover:text-[#3EB489]"
               >
                 {link.label}
-              </a>
+                <span className="absolute -bottom-1 left-0 h-0.5 w-full origin-left scale-x-0 rounded-full bg-[#3EB489] transition-transform duration-200 ease-out group-hover:scale-x-100" />
+              </motion.a>
             ))}
           </div>
 
           {/* ── Right actions ───────────────────────────────────────────── */}
-          <div className="flex items-center gap-1.5 sm:gap-3 lg:gap-4">
+          <motion.div variants={fadeDown} className="flex items-center gap-1.5 sm:gap-3 lg:gap-4">
             {/* Sign In link (sm+ when logged out) */}
             {!user && (
               <Link
@@ -148,8 +179,9 @@ const Navbar = () => {
             {/* Profile dropdown (all sizes when logged in) */}
             {user && (
               <div className="relative" ref={menuRef}>
-                <button
+                <motion.button
                   onClick={() => setMenuOpen((o) => !o)}
+                  whileTap={{ scale: 0.94 }}
                   className="flex items-center gap-1 rounded-full p-1 transition-colors hover:bg-slate-100 sm:gap-2 sm:pr-2"
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
@@ -157,15 +189,26 @@ const Navbar = () => {
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#3EB489] text-sm font-bold text-white shadow-md shadow-emerald-100 sm:h-9 sm:w-9">
                     {initial}
                   </div>
-                  <ChevronDown
-                    size={16}
-                    className={`hidden text-slate-500 transition-transform duration-200 sm:block ${menuOpen ? 'rotate-180' : ''}`}
-                  />
-                </button>
+                  {/* Chevron rotation moved to Motion so it eases on the same
+                      curve as the menu it belongs to. */}
+                  <motion.span
+                    className="hidden sm:block"
+                    animate={{ rotate: menuOpen ? 180 : 0 }}
+                    transition={{ duration: 0.2, ease: EASE }}
+                  >
+                    <ChevronDown size={16} className="text-slate-500" />
+                  </motion.span>
+                </motion.button>
 
+                <AnimatePresence>
                 {menuOpen && (
-                  <div
+                  <motion.div
+                    key="profile-menu"
                     role="menu"
+                    variants={dropdownVariants}
+                    initial="hidden"
+                    animate="show"
+                    exit="exit"
                     className="absolute right-0 top-full mt-2 w-56 origin-top-right overflow-hidden rounded-xl border border-slate-100 bg-white py-1.5 shadow-xl shadow-slate-200/60 sm:w-60"
                   >
                     <div className="border-b border-slate-100 px-4 py-3">
@@ -199,87 +242,132 @@ const Navbar = () => {
                       <LogOut size={16} />
                       Sign Out
                     </button>
-                  </div>
+                  </motion.div>
                 )}
+                </AnimatePresence>
               </div>
             )}
 
-            {/* Write a Review button (all sizes; tighter on mobile) */}
-            <button
+            {/* Write a Review button (all sizes; tighter on mobile).
+                The arrow slides right on hover -a one-property hint that this
+                button takes you somewhere. */}
+            <motion.button
               onClick={handleWriteReview}
-              className="flex items-center gap-1 rounded-lg bg-[#3EB489] px-2.5 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-100 transition-all hover:bg-[#35a37b] hover:shadow-emerald-200 active:scale-95 sm:gap-2 sm:rounded-xl sm:px-5 sm:py-2.5 sm:text-sm"
+              whileHover="hovered"
+              whileTap={{ scale: 0.95 }}
+              initial="rest"
+              animate="rest"
+              className="flex items-center gap-1 rounded-lg bg-[#3EB489] px-2.5 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-100 transition-colors hover:bg-[#35a37b] sm:gap-2 sm:rounded-xl sm:px-5 sm:py-2.5 sm:text-sm"
             >
               <span className="hidden sm:inline">Write a Review</span>
               <span className="sm:hidden">Review</span>
-              <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </button>
+              <motion.span
+                className="inline-flex"
+                variants={{ rest: { x: 0 }, hovered: { x: 3 } }}
+                transition={{ duration: 0.18, ease: EASE }}
+              >
+                <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </motion.span>
+            </motion.button>
 
-            {/* Mobile menu toggle (mobile only) */}
-            <button
+            {/* Mobile menu toggle (mobile only). The icon cross-fades and spins
+                between states instead of swapping instantly. */}
+            <motion.button
               onClick={() => setMobileMenuOpen((o) => !o)}
+              whileTap={{ scale: 0.9 }}
               className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-700 transition-colors hover:bg-slate-100 md:hidden"
               aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileMenuOpen}
             >
-              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
-          </div>
-        </div>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={mobileMenuOpen ? 'close' : 'open'}
+                  className="inline-flex"
+                  initial={{ opacity: 0, rotate: -90, scale: 0.7 }}
+                  animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                  exit={{ opacity: 0, rotate: 90, scale: 0.7 }}
+                  transition={{ duration: 0.15, ease: EASE }}
+                >
+                  {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                </motion.span>
+              </AnimatePresence>
+            </motion.button>
+          </motion.div>
+        </motion.div>
 
         {/* ── Mobile menu panel ─────────────────────────────────────────── */}
+        {/* Animating height (rather than a fixed-height CSS keyframe) means the
+            panel opens to whatever its contents actually need, and closes back
+            down smoothly instead of vanishing. */}
+        <AnimatePresence initial={false}>
         {mobileMenuOpen && (
-          <div className="border-t border-slate-100 bg-white animate-[navSlide_0.18s_ease-out] md:hidden">
-            <div className="mx-auto flex max-w-7xl flex-col gap-1 px-3 py-2 sm:px-6">
+          <motion.div
+            key="mobile-menu"
+            variants={sheetVariants}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+            className="overflow-hidden border-t border-slate-100 bg-white md:hidden"
+          >
+            <motion.div
+              className="mx-auto flex max-w-7xl flex-col gap-1 px-3 py-2 sm:px-6"
+              variants={staggerContainer(0.05, 0.08)}
+              initial="hidden"
+              animate="show"
+            >
               {NAV_LINKS.map((link) => (
-                <a
+                <motion.a
                   key={link.href}
                   href={link.href}
+                  variants={fadeDown}
                   onClick={() => setMobileMenuOpen(false)}
                   className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:text-[#3EB489]"
                 >
                   {link.label}
-                </a>
+                </motion.a>
               ))}
 
               {!user && (
                 <>
                   <div className="my-1 border-t border-slate-100" />
-                  <Link
-                    to="/signin"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:text-[#3EB489]"
-                  >
-                    Sign In
-                  </Link>
+                  <motion.div variants={fadeDown}>
+                    <Link
+                      to="/signin"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:text-[#3EB489]"
+                    >
+                      Sign In
+                    </Link>
+                  </motion.div>
                 </>
               )}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
+        </AnimatePresence>
+      </motion.nav>
 
-        <style>{`
-          @keyframes navSlide {
-            from { opacity: 0; transform: translateY(-6px); }
-            to   { opacity: 1; transform: translateY(0); }
-          }
-        `}</style>
-      </nav>
-
-      {/* Modals -unchanged */}
-      {authOpen && (
-        <LoginModal
-          onClose={closeAllAuth}
-          onSwitchToSignup={openSignup}
-          onSuccess={handleLoginSuccess}
-        />
-      )}
-      {signupOpen && (
-        <SignupModal
-          onClose={closeAllAuth}
-          onSwitchToLogin={openLogin}
-          onSuccess={handleSignupSuccess}
-        />
-      )}
+      {/* Modals -AnimatePresence keeps them mounted long enough to animate out */}
+      <AnimatePresence>
+        {authOpen && (
+          <LoginModal
+            key="login-modal"
+            onClose={closeAllAuth}
+            onSwitchToSignup={openSignup}
+            onSuccess={handleLoginSuccess}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {signupOpen && (
+          <SignupModal
+            key="signup-modal"
+            onClose={closeAllAuth}
+            onSwitchToLogin={openLogin}
+            onSuccess={handleSignupSuccess}
+          />
+        )}
+      </AnimatePresence>
     </>
   )
 }

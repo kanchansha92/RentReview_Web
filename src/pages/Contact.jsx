@@ -10,6 +10,7 @@ import { API_BASE_URL } from '../config/api';
 import useSeo from '../hooks/useSeo';
 import { SITE_URL, LOGO_URL } from '../config/site';
 import { serializeJsonLd } from '../utils/jsonLd';
+import { Reveal, motion, staggerContainer, fadeUp } from '../animations';
 
 // ── Contact details (single source of truth for both UI and JSON-LD) ─────
 const CONTACT = {
@@ -193,8 +194,17 @@ const Contact = () => {
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
           >
-            <div className="absolute left-[-10%] top-[-10%] h-[300px] w-[300px] rounded-full bg-[#3EB489]/5 blur-[80px] sm:h-[500px] sm:w-[500px] sm:blur-[120px]" />
-            <div className="absolute bottom-[10%] right-[5%] h-[250px] w-[250px] rounded-full bg-blue-50/50 blur-[70px] sm:h-[400px] sm:w-[400px] sm:blur-[100px]" />
+            {/* Drifting on a very long loop -same treatment as the homepage hero. */}
+            <motion.div
+              className="absolute left-[-10%] top-[-10%] h-[300px] w-[300px] rounded-full bg-[#3EB489]/5 blur-[80px] sm:h-[500px] sm:w-[500px] sm:blur-[120px]"
+              animate={{ x: [0, 40, 0], y: [0, 30, 0], scale: [1, 1.08, 1] }}
+              transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <motion.div
+              className="absolute bottom-[10%] right-[5%] h-[250px] w-[250px] rounded-full bg-blue-50/50 blur-[70px] sm:h-[400px] sm:w-[400px] sm:blur-[100px]"
+              animate={{ x: [0, -35, 0], y: [0, -25, 0], scale: [1, 1.1, 1] }}
+              transition={{ duration: 24, repeat: Infinity, ease: 'easeInOut' }}
+            />
           </div>
 
           <div className="relative z-10 mx-auto max-w-4xl text-center">
@@ -211,28 +221,36 @@ const Contact = () => {
               </ol>
             </nav>
 
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#DCFCE7] px-4 py-1.5 text-xs font-bold text-[#166534] ring-1 ring-inset ring-[#BBF7D0] sm:text-[13px]">
-              <Sparkles className="h-3.5 w-3.5 text-[#3EB489]" aria-hidden="true" />
-              We reply within 24 hours
-            </div>
-
-            <h1
-              id="contact-hero-heading"
-              className="mt-6 text-4xl font-black tracking-tight text-[#0F172A] sm:mt-8 sm:text-5xl md:text-6xl lg:text-7xl"
+            {/* Above the fold, so this plays on mount rather than on scroll. */}
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={staggerContainer(0.09, 0.05)}
             >
-              We'd love to{' '}
-              <span className="text-[#3EB489]">hear from you.</span>
-            </h1>
+              <motion.div variants={fadeUp} className="inline-flex items-center gap-2 rounded-full bg-[#DCFCE7] px-4 py-1.5 text-xs font-bold text-[#166534] ring-1 ring-inset ring-[#BBF7D0] sm:text-[13px]">
+                <Sparkles className="h-3.5 w-3.5 text-[#3EB489]" aria-hidden="true" />
+                We reply within 24 hours
+              </motion.div>
 
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#475569] sm:mt-6 sm:text-lg lg:text-xl">
-              Questions, feedback, or help with a review -our team is here for you.
-              Send us a message and we'll get back to you fast.
-            </p>
+              <motion.h1
+                variants={fadeUp}
+                id="contact-hero-heading"
+                className="mt-6 text-4xl font-black tracking-tight text-[#0F172A] sm:mt-8 sm:text-5xl md:text-6xl lg:text-7xl"
+              >
+                We'd love to{' '}
+                <span className="text-[#3EB489]">hear from you.</span>
+              </motion.h1>
+
+              <motion.p variants={fadeUp} className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#475569] sm:mt-6 sm:text-lg lg:text-xl">
+                Questions, feedback, or help with a review -our team is here for you.
+                Send us a message and we'll get back to you fast.
+              </motion.p>
+            </motion.div>
           </div>
         </section>
 
         {/* ── Main card: green info panel + form ────────────────────────── */}
-        <section
+        <Reveal as="section"
           aria-label="Contact form and information"
           className="relative z-10 -mt-16 px-4 pb-16 sm:-mt-20 sm:px-6 sm:pb-20 lg:-mt-24 lg:px-8 lg:pb-28"
         >
@@ -476,7 +494,7 @@ const Contact = () => {
               </div>
             </div>
           </div>
-        </section>
+        </Reveal>
 
         {/* JSON-LD structured data */}
         <script

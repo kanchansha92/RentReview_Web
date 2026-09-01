@@ -10,6 +10,14 @@ import { getProperties } from '../services/reviewService'
 import { API_BASE_URL } from '../config/api'
 import { serializeJsonLd } from '../utils/jsonLd'
 import { SITE_URL, LOGO_URL, DEFAULT_OG_IMAGE } from '../config/site'
+import {
+  motion,
+  AnimatePresence,
+  fadeUp,
+  dropdownVariants,
+  staggerContainer,
+  EASE,
+} from '../animations'
 
 const TRUST_BADGES = ['ID Verified Reviews', '100% Free to Use', 'Privacy Protected']
 
@@ -236,38 +244,62 @@ const Hero = () => {
       aria-describedby="hero-subhead"
       className="relative bg-[#F0FDF4]/50 px-4 py-10 sm:px-6 sm:py-14 lg:min-h-[85vh] lg:px-8 lg:py-16"
     >
+      {/* Ambient wash. These drift on a very long loop -slow enough that you
+          never catch them moving, just enough that the background isn't dead.
+          Transform-only, so they stay off the main thread. */}
       <div className="pointer-events-none absolute left-0 top-0 -z-10 h-full w-full overflow-hidden" aria-hidden="true">
-        <div className="absolute left-[-10%] top-[-10%] h-[300px] w-[300px] rounded-full bg-[#3EB489]/5 blur-[80px] sm:h-[500px] sm:w-[500px] sm:blur-[120px]" />
-        <div className="absolute bottom-[10%] right-[5%] h-[250px] w-[250px] rounded-full bg-blue-50/50 blur-[70px] sm:h-[400px] sm:w-[400px] sm:blur-[100px]" />
+        <motion.div
+          className="absolute left-[-10%] top-[-10%] h-[300px] w-[300px] rounded-full bg-[#3EB489]/5 blur-[80px] sm:h-[500px] sm:w-[500px] sm:blur-[120px]"
+          animate={{ x: [0, 40, 0], y: [0, 30, 0], scale: [1, 1.08, 1] }}
+          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute bottom-[10%] right-[5%] h-[250px] w-[250px] rounded-full bg-blue-50/50 blur-[70px] sm:h-[400px] sm:w-[400px] sm:blur-[100px]"
+          animate={{ x: [0, -35, 0], y: [0, -25, 0], scale: [1, 1.1, 1] }}
+          transition={{ duration: 24, repeat: Infinity, ease: 'easeInOut' }}
+        />
       </div>
 
       <div className="mx-auto max-w-7xl">
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12 xl:gap-16">
-          <div className="relative z-10 space-y-6 sm:space-y-8 lg:space-y-10">
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#DCFCE7] px-3 py-1 text-xs font-bold text-[#166534] ring-1 ring-inset ring-[#BBF7D0] sm:px-4 sm:py-1.5 sm:text-[13px]">
+          {/* The hero is above the fold, so it plays on mount rather than on
+              scroll -a whileInView here would race the first paint. */}
+          <motion.div
+            className="relative z-10 space-y-6 sm:space-y-8 lg:space-y-10"
+            initial="hidden"
+            animate="show"
+            variants={staggerContainer(0.1, 0.05)}
+          >
+            <motion.div
+              variants={fadeUp}
+              className="inline-flex items-center gap-2 rounded-full bg-[#DCFCE7] px-3 py-1 text-xs font-bold text-[#166534] ring-1 ring-inset ring-[#BBF7D0] sm:px-4 sm:py-1.5 sm:text-[13px]"
+            >
               <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
               Trusted by 50,000+ Renters
-            </div>
+            </motion.div>
 
             <div className="space-y-4 sm:space-y-6">
-              <h1
+              <motion.h1
+                variants={fadeUp}
                 id="hero-heading"
                 className="text-3xl font-black tracking-tight text-[#0F172A] sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl"
               >
                 Share Your Rental{' '}
                 <br className="hidden sm:block" />
                 <span className="text-[#3EB489]">Experience</span>
-              </h1>
-              <p
+              </motion.h1>
+              <motion.p
+                variants={fadeUp}
                 id="hero-subhead"
                 className="max-w-xl text-base leading-relaxed text-[#475569] sm:text-lg lg:text-[19px]"
               >
                 Your past rental is someone else's future home. Help fellow renters
                 make informed decisions by sharing honest reviews.
-              </p>
+              </motion.p>
             </div>
 
-            <form
+            <motion.form
+              variants={fadeUp}
               ref={wrapperRef}
               onSubmit={handleSubmit}
               action="/write-review"
@@ -323,8 +355,17 @@ const Hero = () => {
                 </button>
               </div>
 
+              {/* AnimatePresence lets the results panel animate *out* as well
+                  as in -without it, closing the dropdown is an instant cut. */}
+              <AnimatePresence>
               {isOpen && (
-                <ul
+                <motion.ul
+                  key="hero-results"
+                  variants={dropdownVariants}
+                  initial="hidden"
+                  animate="show"
+                  exit="exit"
+                  style={{ transformOrigin: 'top center' }}
                   id="hero-search-results"
                   role="listbox"
                   aria-label="Property and address suggestions"
@@ -534,14 +575,19 @@ const Hero = () => {
                       )}
                     </>
                   )}
-                </ul>
+                </motion.ul>
               )}
-            </form>
+              </AnimatePresence>
+            </motion.form>
 
-            <ul className="flex flex-wrap items-center gap-x-5 gap-y-3 pt-1 sm:gap-x-6 sm:gap-y-4 lg:gap-x-8">
+            <motion.ul
+              variants={staggerContainer(0.08)}
+              className="flex flex-wrap items-center gap-x-5 gap-y-3 pt-1 sm:gap-x-6 sm:gap-y-4 lg:gap-x-8"
+            >
               {TRUST_BADGES.map((text) => (
-                <li
+                <motion.li
                   key={text}
+                  variants={fadeUp}
                   className="flex items-center gap-2 text-sm font-bold text-[#475569] sm:text-[15px]"
                 >
                   <span
@@ -551,13 +597,24 @@ const Hero = () => {
                     <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={3} />
                   </span>
                   {text}
-                </li>
+                </motion.li>
               ))}
-            </ul>
-          </div>
+            </motion.ul>
+          </motion.div>
 
-          <div className="relative">
-            <div className="group relative overflow-hidden rounded-[24px] border-[8px] border-white bg-white shadow-2xl shadow-emerald-900/10 sm:rounded-[32px] sm:border-[10px] lg:rounded-[40px] lg:border-[12px]">
+          {/* Right column: slides in from the outside edge, then floats on a
+              slow loop so the composition never feels completely static. */}
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0, x: 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, ease: EASE, delay: 0.15 }}
+          >
+            <motion.div
+              className="group relative overflow-hidden rounded-[24px] border-[8px] border-white bg-white shadow-2xl shadow-emerald-900/10 sm:rounded-[32px] sm:border-[10px] lg:rounded-[40px] lg:border-[12px]"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+            >
               <img
                 src={heroImage}
                 alt="A welcoming modern rental home -RentReview helps you find verified reviews from real tenants in Bangalore and across India"
@@ -569,7 +626,14 @@ const Hero = () => {
                 className="h-[260px] w-full object-cover transition-transform duration-1000 group-hover:scale-110 sm:h-[400px] md:h-[450px] lg:h-[550px]"
               />
 
-              <figure className="absolute bottom-3 left-3 right-3 rounded-2xl border border-slate-50 bg-white/95 p-3 shadow-2xl backdrop-blur-md sm:bottom-6 sm:left-8 sm:right-8 sm:rounded-3xl sm:p-4">
+              {/* The floating review card lands last -it's the proof point, so
+                  it reads better arriving after the photo has settled. */}
+              <motion.figure
+                className="absolute bottom-3 left-3 right-3 rounded-2xl border border-slate-50 bg-white/95 p-3 shadow-2xl backdrop-blur-md sm:bottom-6 sm:left-8 sm:right-8 sm:rounded-3xl sm:p-4"
+                initial={{ opacity: 0, y: 24, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.5, ease: EASE, delay: 0.6 }}
+              >
                 <div className="flex items-start gap-3 sm:gap-5">
                   <div
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#DCFCE7] text-[#3EB489] sm:h-14 sm:w-14"
@@ -584,7 +648,15 @@ const Hero = () => {
                       aria-label="5 out of 5 stars"
                     >
                       {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="h-4 w-4 sm:h-[18px] sm:w-[18px]" fill="currentColor" aria-hidden="true" />
+                        <motion.span
+                          key={i}
+                          className="inline-flex"
+                          initial={{ opacity: 0, scale: 0.3 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.85 + i * 0.07, type: 'spring', stiffness: 420, damping: 16 }}
+                        >
+                          <Star className="h-4 w-4 sm:h-[18px] sm:w-[18px]" fill="currentColor" aria-hidden="true" />
+                        </motion.span>
                       ))}
                     </div>
                     <figcaption className="text-base font-black text-[#0F172A] sm:text-lg">
@@ -595,9 +667,9 @@ const Hero = () => {
                     </blockquote>
                   </div>
                 </div>
-              </figure>
-            </div>
-          </div>
+              </motion.figure>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { Home, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { verifyEmail as apiVerifyEmail } from '../services/authService';
 import { updateUser, selectUser } from '../store/authSlice';
 import useSeo from '../hooks/useSeo';
+import { motion } from '../animations';
 
 
 
@@ -54,7 +55,14 @@ const VerifyEmail = () => {
 
     return (
         <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center p-4">
-            <div className="w-full max-w-[440px] bg-white rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.2)] p-8 flex flex-col items-center gap-6">
+            {/* The card lands with a small spring so the page has a focal
+                point the moment it opens. */}
+            <motion.div
+                className="w-full max-w-[440px] bg-white rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.2)] p-8 flex flex-col items-center gap-6"
+                initial={{ opacity: 0, y: 18, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 240, damping: 22 }}
+            >
                 <Link to="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
                     <div className="w-9 h-9 bg-[#41B985] rounded-xl flex items-center justify-center shadow">
                         <Home className="w-5 h-5 text-white" />
@@ -112,7 +120,7 @@ const VerifyEmail = () => {
                         </Link>
                     </div>
                 )}
-            </div>
+            </motion.div>
         </div>
     );
 };

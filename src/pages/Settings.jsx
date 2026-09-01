@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import ReviewNavbar from '../components/ReviewNavbar';
 import useSeo from '../hooks/useSeo';
+import { AnimatePresence, motion, EASE } from '../animations';
 
 const Settings = () => {
   // Private account settings -noindex.
@@ -199,14 +200,26 @@ const Settings = () => {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center gap-4 px-6 py-4 rounded-3xl font-black transition-all ${activeTab === tab.id
-                          ? 'bg-[#3EB489] text-white shadow-lg shadow-emerald-100'
+                      className={`relative w-full flex items-center gap-4 px-6 py-4 rounded-3xl font-black transition-colors ${activeTab === tab.id
+                          ? 'text-white'
                           : 'text-[#64748B] hover:bg-slate-50'
                         }`}
                     >
-                      {tab.icon}
-                      <span>{tab.label}</span>
-                      {activeTab === tab.id && <ChevronRight size={18} className="ml-auto" />}
+                      {/* One highlight, shared across the tabs via layoutId, so
+                          it slides between them instead of blinking. */}
+                      {activeTab === tab.id && (
+                        <motion.span
+                          layoutId="settings-tab-pill"
+                          aria-hidden="true"
+                          className="absolute inset-0 rounded-3xl bg-[#3EB489] shadow-lg shadow-emerald-100"
+                          transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                        />
+                      )}
+                      <span className="relative z-10 flex w-full items-center gap-4">
+                        {tab.icon}
+                        <span>{tab.label}</span>
+                        {activeTab === tab.id && <ChevronRight size={18} className="ml-auto" />}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -224,8 +237,21 @@ const Settings = () => {
             {/* Main Content Area */}
             <div className="flex-1 w-full bg-white rounded-[48px] border border-white shadow-2xl shadow-slate-200/40 p-8 md:p-12 min-h-[600px]">
 
+              {/* Tab panels cross-fade. mode="wait" lets the outgoing panel
+                  clear before the next one arrives, so two differently-sized
+                  forms never overlap mid-switch. The panels used Tailwind
+                  `animate-in` classes from a plugin this project doesn't
+                  install, so nothing was actually animating before. */}
+              <AnimatePresence mode="wait" initial={false}>
               {activeTab === 'account' && (
-                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <motion.div
+                  key="account"
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.24, ease: EASE }}
+                  className="space-y-12"
+                >
                   <div className="space-y-2">
                     <h2 className="text-4xl font-black text-[#0F172A] tracking-tight">Account Settings</h2>
                     <p className="text-[#64748B] font-bold">Manage your profile information and how others see you.</p>
@@ -301,11 +327,18 @@ const Settings = () => {
                       </button>
                     </div>
                   </form>
-                </div>
+                </motion.div>
               )}
 
               {activeTab === 'security' && (
-                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <motion.div
+                  key="security"
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.24, ease: EASE }}
+                  className="space-y-12"
+                >
                   <div className="space-y-2">
                     <h2 className="text-4xl font-black text-[#0F172A] tracking-tight">Security</h2>
                     <p className="text-[#64748B] font-bold">Update your password and manage account security settings.</p>
@@ -387,11 +420,18 @@ const Settings = () => {
                       Enable
                     </button>
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {activeTab === 'notifications' && (
-                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <motion.div
+                  key="notifications"
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.24, ease: EASE }}
+                  className="space-y-12"
+                >
                   <div className="space-y-2">
                     <h2 className="text-4xl font-black text-[#0F172A] tracking-tight">Notifications</h2>
                     <p className="text-[#64748B] font-bold">Control how and when you want to be notified by RentReview.</p>
@@ -422,11 +462,18 @@ const Settings = () => {
                       </div>
                     ))}
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {activeTab === 'privacy' && (
-                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <motion.div
+                  key="privacy"
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.24, ease: EASE }}
+                  className="space-y-12"
+                >
                   <div className="space-y-2">
                     <h2 className="text-4xl font-black text-[#0F172A] tracking-tight">Privacy Settings</h2>
                     <p className="text-[#64748B] font-bold">Control your data and how your information is shared.</p>
@@ -466,8 +513,9 @@ const Settings = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )}
+              </AnimatePresence>
 
             </div>
           </div>

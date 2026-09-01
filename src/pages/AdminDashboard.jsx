@@ -17,6 +17,9 @@ import { getPendingVerifications, getReviews, getProperties } from '../services/
 import { getMe } from '../services/authService';
 import { selectUser, updateUser } from '../store/authSlice';
 import useSeo from '../hooks/useSeo';
+import { Stagger, StaggerItem, motion, fadeUp } from '../animations';
+
+const MotionLink = motion.create(Link);
 
 
 const STAT_CARDS = [
@@ -197,13 +200,15 @@ const AdminDashboard = () => {
                         )}
 
                         {/* ── Counts ───────────────────────────────────────── */}
-                        <ul className="mb-8 grid list-none grid-cols-1 gap-3 sm:grid-cols-3">
+                        <Stagger as="ul" stagger={0.07} className="mb-8 grid list-none grid-cols-1 gap-3 sm:grid-cols-3">
                             {STAT_CARDS.map(({ key, label, icon: Icon, to, hint, accent }) => {
                                 const value = stats[key];
                                 return (
-                                    <li key={key}>
-                                        <Link
+                                    <StaggerItem as="li" variants={fadeUp} key={key}>
+                                        <MotionLink
                                             to={to}
+                                            whileHover={{ y: -3 }}
+                                            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                                             className="flex h-full flex-col gap-3 rounded-2xl border border-black/10 bg-white p-5 shadow-sm transition-colors hover:border-[#41B985]/40 hover:bg-[#F6FDFA] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#41B985] focus-visible:ring-offset-2"
                                         >
                                             <div className="flex items-center justify-between gap-2">
@@ -234,21 +239,23 @@ const AdminDashboard = () => {
                                             )}
 
                                             <span className="text-xs text-slate-500">{hint}</span>
-                                        </Link>
-                                    </li>
+                                        </MotionLink>
+                                    </StaggerItem>
                                 );
                             })}
-                        </ul>
+                        </Stagger>
 
                         {/* ── Tools ────────────────────────────────────────── */}
                         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">
                             Tools
                         </h2>
-                        <ul className="grid list-none grid-cols-1 gap-3 lg:grid-cols-3">
+                        <Stagger as="ul" stagger={0.07} className="grid list-none grid-cols-1 gap-3 lg:grid-cols-3">
                             {TOOLS.map(({ to, icon: Icon, title, body }) => (
-                                <li key={to}>
-                                    <Link
+                                <StaggerItem as="li" variants={fadeUp} key={to}>
+                                    <MotionLink
                                         to={to}
+                                        whileHover={{ y: -3 }}
+                                        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                                         className="group flex h-full flex-col gap-2 rounded-2xl border border-black/10 bg-white p-5 shadow-sm transition-colors hover:border-[#41B985]/40 hover:bg-[#F6FDFA] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#41B985] focus-visible:ring-offset-2"
                                     >
                                         <Icon className="h-5 w-5 text-[#41B985]" aria-hidden="true" />
@@ -260,10 +267,10 @@ const AdminDashboard = () => {
                                             />
                                         </span>
                                         <span className="text-sm leading-relaxed text-[#4A5565]">{body}</span>
-                                    </Link>
-                                </li>
+                                    </MotionLink>
+                                </StaggerItem>
                             ))}
-                        </ul>
+                        </Stagger>
 
                         {/* Roles are granted from the server only — there is no API for it,
                             so saying where the switch lives beats leaving an admin hunting. */}

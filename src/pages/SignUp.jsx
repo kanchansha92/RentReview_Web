@@ -5,6 +5,14 @@ import { Mail, Lock, Eye, EyeOff, X, Home, User, Check, Loader2 } from 'lucide-r
 import { BASE_URL } from '../constants';
 import { loginSuccess } from '../store/authSlice';
 import useSeo from '../hooks/useSeo';
+import {
+    motion,
+    AnimatePresence,
+    errorVariants,
+    staggerContainer,
+    fadeUp,
+    EASE,
+} from '../animations';
 
 const BENEFITS = [
     'Free to use, forever',
@@ -107,16 +115,35 @@ const SignUp = () => {
 
     return (
         <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center p-2 sm:p-4 lg:p-6">
-            {/* Main Container */}
-            <div className="relative w-full max-w-[1100px] bg-white rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] flex flex-col md:flex-row overflow-hidden">
+            {/* Main Container -lands as one card, then its two columns fill in */}
+            <motion.div
+                className="relative w-full max-w-[1100px] bg-white rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] flex flex-col md:flex-row overflow-hidden"
+                initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 220, damping: 24 }}
+            >
 
                 {/* Left Column -marketing, md+ only */}
-                <aside
+                <motion.aside
                     aria-label="About RentReview"
+                    initial={{ opacity: 0, x: -24 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.45, ease: EASE, delay: 0.12 }}
                     className="relative hidden md:flex md:w-[400px] md:min-h-full bg-gradient-to-br from-[#41B985] to-[#2d9e6e] p-6 lg:p-8 flex-col justify-center text-white overflow-hidden shrink-0"
                 >
-                    <div aria-hidden="true" className="absolute top-[-100px] right-[-100px] w-[200px] h-[200px] bg-white/10 rounded-full pointer-events-none" />
-                    <div aria-hidden="true" className="absolute bottom-[-80px] left-[-80px] w-[160px] h-[160px] bg-white/10 rounded-full pointer-events-none" />
+                    {/* Decorative discs, drifting on a very long loop. */}
+                    <motion.div
+                        aria-hidden="true"
+                        className="absolute top-[-100px] right-[-100px] w-[200px] h-[200px] bg-white/10 rounded-full pointer-events-none"
+                        animate={{ x: [0, 18, 0], y: [0, 14, 0], scale: [1, 1.06, 1] }}
+                        transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                    <motion.div
+                        aria-hidden="true"
+                        className="absolute bottom-[-80px] left-[-80px] w-[160px] h-[160px] bg-white/10 rounded-full pointer-events-none"
+                        animate={{ x: [0, -16, 0], y: [0, -12, 0], scale: [1, 1.08, 1] }}
+                        transition={{ duration: 19, repeat: Infinity, ease: 'easeInOut' }}
+                    />
 
                     <div className="relative z-10 flex flex-col gap-4">
                         <Link
@@ -176,20 +203,28 @@ const SignUp = () => {
                             ))}
                         </ul>
                     </div>
-                </aside>
+                </motion.aside>
 
                 {/* Right Column -sign-up form */}
                 <main className="flex-1 flex flex-col justify-center p-4 sm:p-6 md:p-8 lg:p-10 relative">
-                    <button
+                    <motion.button
                         type="button"
                         onClick={() => navigate('/')}
                         aria-label="Close and return to home"
+                        whileHover={{ rotate: 90 }}
+                        whileTap={{ scale: 0.85 }}
+                        transition={{ duration: 0.2, ease: EASE }}
                         className="absolute top-3 right-3 sm:top-5 sm:right-5 text-slate-400 hover:text-slate-600 transition-colors"
                     >
                         <X className="w-5 h-5" aria-hidden="true" />
-                    </button>
+                    </motion.button>
 
-                    <div className="w-full max-w-[390px] mx-auto flex flex-col gap-3 sm:gap-4">
+                    <motion.div
+                        className="w-full max-w-[390px] mx-auto flex flex-col gap-3 sm:gap-4"
+                        initial="hidden"
+                        animate="show"
+                        variants={staggerContainer(0.06, 0.2)}
+                    >
                         {/* Mobile-only compact logo */}
                         <Link
                             to="/"
@@ -246,19 +281,29 @@ const SignUp = () => {
                             <div aria-hidden="true" className="flex-1 border-t border-slate-200" />
                         </div>
 
-                        {/* Error banner */}
-                        {error && (
-                            <div
-                                role="alert"
-                                className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2.5"
-                            >
-                                <span aria-hidden="true" className="mt-0.5 shrink-0">⚠</span>
-                                <span>{error}</span>
-                            </div>
-                        )}
+                        {/* Error banner -height animates so the form slides down
+                            to make room instead of jumping. */}
+                        <AnimatePresence initial={false}>
+                            {error && (
+                                <motion.div
+                                    key="signup-page-error"
+                                    role="alert"
+                                    variants={errorVariants}
+                                    initial="hidden"
+                                    animate="show"
+                                    exit="exit"
+                                    className="overflow-hidden"
+                                >
+                                    <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2.5">
+                                        <span aria-hidden="true" className="mt-0.5 shrink-0">⚠</span>
+                                        <span>{error}</span>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Form */}
-                        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-2.5 sm:gap-3">
+                        <motion.form variants={fadeUp} onSubmit={handleSubmit} noValidate className="flex flex-col gap-2.5 sm:gap-3">
                             {/* Name */}
                             <div className="flex flex-col gap-1">
                                 <label htmlFor="name" className="text-sm font-medium text-[#0A0A0A]">Full Name</label>
@@ -410,28 +455,31 @@ const SignUp = () => {
                             </div>
 
                             {/* Submit */}
-                            <button
+                            <motion.button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-[#41B985] hover:bg-[#36a374] active:bg-[#2d9062] disabled:opacity-70 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all shadow-[0_4px_14px_0_rgba(65,185,133,0.35)] cursor-pointer"
+                                whileHover={loading ? undefined : { scale: 1.015 }}
+                                whileTap={loading ? undefined : { scale: 0.98 }}
+                                transition={{ duration: 0.15, ease: EASE }}
+                                className="w-full bg-[#41B985] hover:bg-[#36a374] active:bg-[#2d9062] disabled:opacity-70 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-[0_4px_14px_0_rgba(65,185,133,0.35)] cursor-pointer"
                             >
                                 {loading ? (
                                     <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />Creating Account…</>
                                 ) : (
                                     <>Create Account</>
                                 )}
-                            </button>
-                        </form>
+                            </motion.button>
+                        </motion.form>
 
-                        <p className="text-center text-xs sm:text-sm text-[#4A5565]">
+                        <motion.p variants={fadeUp} className="text-center text-xs sm:text-sm text-[#4A5565]">
                             Already have an account?{' '}
                             <Link to="/signin" className="text-[#41B985] font-semibold hover:underline">
                                 Sign in
                             </Link>
-                        </p>
-                    </div>
+                        </motion.p>
+                    </motion.div>
                 </main>
-            </div>
+            </motion.div>
         </div>
     );
 };

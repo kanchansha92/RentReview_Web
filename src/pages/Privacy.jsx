@@ -6,6 +6,7 @@ import ReviewNavbar from '../components/ReviewNavbar';
 import useSeo from '../hooks/useSeo';
 import { SITE_URL } from '../config/site';
 import { serializeJsonLd } from '../utils/jsonLd';
+import { Reveal, motion } from '../animations';
 
 // Last-updated date drives both the visible label AND the JSON-LD `lastReviewed`.
 // Update this whenever you materially change the policy.
@@ -101,9 +102,16 @@ const Privacy = () => {
           </nav>
 
           {/* Header */}
-          <header className="text-center mb-10 sm:mb-12 lg:mb-16">
+          <Reveal as="header" className="text-center mb-10 sm:mb-12 lg:mb-16">
             <div className="inline-flex items-center gap-2 mb-3 sm:mb-4">
-              <div aria-hidden="true" className="h-1 w-8 rounded-full bg-[#41B985]" />
+              {/* The brand rule draws itself out from the left. */}
+              <motion.div
+                aria-hidden="true"
+                className="h-1 w-8 origin-left rounded-full bg-[#41B985]"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+              />
               <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] text-[#41B985] uppercase">
                 Legal
               </span>
@@ -117,7 +125,7 @@ const Privacy = () => {
                 {LAST_UPDATED_DISPLAY}
               </time>
             </p>
-          </header>
+          </Reveal>
 
           {/* Policy article */}
           <article>
@@ -126,7 +134,7 @@ const Privacy = () => {
               {SECTIONS.map((section, i) => {
                 const Icon = section.icon;
                 return (
-                  <section
+                  <Reveal as="section"
                     key={i}
                     aria-labelledby={`section-${i}`}
                     className="flex gap-4 sm:gap-5 lg:gap-6 items-start group"
@@ -160,13 +168,13 @@ const Privacy = () => {
                         )}
                       </p>
                     </div>
-                  </section>
+                  </Reveal>
                 );
               })}
             </div>
 
             {/* Detailed text block */}
-            <section
+            <Reveal as="section"
               aria-labelledby="detailed-policy"
               className="mt-12 sm:mt-16 lg:mt-20 p-5 sm:p-6 lg:p-8 rounded-2xl bg-slate-50 border border-slate-100"
             >
@@ -211,7 +219,7 @@ const Privacy = () => {
                   </p>
                 </div>
               </div>
-            </section>
+            </Reveal>
           </article>
 
           {/* JSON-LD structured data */}

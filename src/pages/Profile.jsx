@@ -34,6 +34,7 @@ import {
 import ReviewNavbar from '../components/ReviewNavbar';
 import { useDialogA11y } from '../components/LoginModal';
 import useSeo from '../hooks/useSeo';
+import { Stagger, StaggerItem, motion, fadeUp } from '../animations';
 
 
 const EditProfileDialogA11y = ({ dialogRef }) => {
@@ -334,12 +335,15 @@ const Profile = () => {
             <aside aria-label="Profile statistics" className="lg:col-span-4 space-y-6 sm:space-y-7 lg:space-y-8">
 
               {/* Stats grid */}
-              <dl className="grid grid-cols-2 gap-3 sm:gap-4">
+              <Stagger as="dl" stagger={0.07} className="grid grid-cols-2 gap-3 sm:gap-4">
                 {stats.map((stat, i) => {
                   const Icon = stat.icon;
                   return (
-                    <div
+                    <StaggerItem
                       key={i}
+                      variants={fadeUp}
+                      whileHover={{ y: -4 }}
+                      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                       className="bg-white p-4 sm:p-5 lg:p-6 rounded-2xl sm:rounded-3xl lg:rounded-[32px] border border-white shadow-lg sm:shadow-xl shadow-slate-200/40"
                     >
                       <div
@@ -352,10 +356,10 @@ const Profile = () => {
                       <dt className="text-[10px] sm:text-xs font-black text-[#64748B] uppercase tracking-widest mt-0.5">
                         {stat.label}
                       </dt>
-                    </div>
+                    </StaggerItem>
                   );
                 })}
-              </dl>
+              </Stagger>
 
               {/* Email confirmation prompt (only while unconfirmed) */}
               {!user.isVerified && (
@@ -418,14 +422,28 @@ const Profile = () => {
                       aria-controls={`${tab.id}-panel`}
                       tabIndex={isActive ? 0 : -1}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3EB489] focus-visible:ring-offset-2 ${isActive
-                        ? 'bg-[#3EB489] text-white shadow-lg shadow-emerald-100'
+                      className={`relative flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3EB489] focus-visible:ring-offset-2 ${isActive
+                        ? 'text-white'
                         : 'text-[#64748B] hover:bg-slate-50'
                         }`}
                     >
-                      <Icon size={14} aria-hidden="true" className="sm:hidden" />
-                      <Icon size={18} aria-hidden="true" className="hidden sm:block" />
-                      {tab.label}
+                      {/* One pill, shared between tabs via layoutId: Motion
+                          measures both positions and slides the same element
+                          across, instead of one background fading out while
+                          another fades in. */}
+                      {isActive && (
+                        <motion.span
+                          layoutId="profile-tab-pill"
+                          aria-hidden="true"
+                          className="absolute inset-0 rounded-xl sm:rounded-2xl bg-[#3EB489] shadow-lg shadow-emerald-100"
+                          transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+                        <Icon size={14} aria-hidden="true" className="sm:hidden" />
+                        <Icon size={18} aria-hidden="true" className="hidden sm:block" />
+                        {tab.label}
+                      </span>
                     </button>
                   );
                 })}

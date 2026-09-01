@@ -8,6 +8,7 @@ import ReviewNavbar from '../components/ReviewNavbar';
 import useSeo from '../hooks/useSeo';
 import { SITE_URL } from '../config/site';
 import { serializeJsonLd } from '../utils/jsonLd';
+import { Reveal, motion } from '../animations';
 
 // ── FAQ data ────────────────────────────────────────────────────────────
 const FAQ_CATEGORIES = [
@@ -233,9 +234,16 @@ const Help = () => {
           </nav>
 
           {/* Header */}
-          <header className="text-center mb-10 sm:mb-12 lg:mb-16">
+          <Reveal as="header" className="text-center mb-10 sm:mb-12 lg:mb-16">
             <div className="inline-flex items-center gap-2 mb-4 sm:mb-5">
-              <div aria-hidden="true" className="h-1 w-8 rounded-full bg-[#41B985]" />
+              {/* The brand rule draws itself out from the left. */}
+              <motion.div
+                aria-hidden="true"
+                className="h-1 w-8 origin-left rounded-full bg-[#41B985]"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+              />
               <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] text-[#41B985] uppercase">
                 Support
               </span>
@@ -255,11 +263,11 @@ const Help = () => {
               Answers to the {totalQuestions} questions renters ask us most -about
               writing reviews, ID verification, your account, and your rights as a tenant.
             </p>
-          </header>
+          </Reveal>
 
           <article>
             {/* ── How to use this page ────────────────────────────────────── */}
-            <section
+            <Reveal as="section"
               aria-labelledby="start-here-heading"
               className="bg-slate-900 text-white p-6 sm:p-8 lg:p-12 rounded-2xl sm:rounded-3xl mb-10 sm:mb-12 lg:mb-16 relative overflow-hidden"
             >
@@ -297,7 +305,7 @@ const Help = () => {
                   </li>
                 ))}
               </ol>
-            </section>
+            </Reveal>
 
             {/* ── Category filter ─────────────────────────────────────────── */}
             <section aria-labelledby="faq-heading">
@@ -397,7 +405,7 @@ const Help = () => {
             </section>
 
             {/* ── Still need help ─────────────────────────────────────────── */}
-            <section
+            <Reveal as="section"
               aria-labelledby="more-help-heading"
               className="mt-12 sm:mt-16 lg:mt-20 p-5 sm:p-6 lg:p-8 bg-[#41B985]/10 border border-[#41B985]/20 rounded-2xl"
             >
@@ -429,7 +437,7 @@ const Help = () => {
                   Contact Support
                 </Link>
               </div>
-            </section>
+            </Reveal>
 
             {/* Related links */}
             <p className="mt-8 sm:mt-10 text-center text-xs sm:text-sm text-slate-600">

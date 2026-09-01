@@ -6,6 +6,7 @@ import ReviewNavbar from '../components/ReviewNavbar';
 import { getPendingVerifications, decideVerification } from '../services/reviewService';
 import { selectUser } from '../store/authSlice';
 import useSeo from '../hooks/useSeo';
+import { AnimatePresence, motion, fadeUp, staggerContainer } from '../animations';
 
 
 
@@ -128,14 +129,28 @@ const AdminVerifications = () => {
                         )}
 
                         {!loading && rows.length > 0 && (
-                            <ul className="flex flex-col gap-3 list-none">
+                            // AnimatePresence + the layout animation mean an
+                            // approved or rejected row collapses out and the
+                            // queue below closes the gap, instead of the list
+                            // jumping under the moderator's cursor.
+                            <motion.ul
+                                layout
+                                initial="hidden"
+                                animate="show"
+                                variants={staggerContainer(0.05)}
+                                className="flex flex-col gap-3 list-none"
+                            >
+                                <AnimatePresence initial={false}>
                                 {rows.map((r) => {
                                     const v = r.verification || {};
                                     const busy = busyId === r._id;
                                     return (
-                                        <li
+                                        <motion.li
                                             key={r._id}
-                                            className="rounded-2xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm"
+                                            layout
+                                            variants={fadeUp}
+                                            exit={{ opacity: 0, x: -24, height: 0, marginBottom: 0, transition: { duration: 0.22, ease: 'easeIn' } }}
+                                            className="overflow-hidden rounded-2xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm"
                                         >
                                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                                 <div className="flex min-w-0 flex-col gap-1.5">
@@ -196,10 +211,11 @@ const AdminVerifications = () => {
                                                     </button>
                                                 </div>
                                             </div>
-                                        </li>
+                                        </motion.li>
                                     );
                                 })}
-                            </ul>
+                                </AnimatePresence>
+                            </motion.ul>
                         )}
                     </>
                 )}

@@ -11,6 +11,7 @@ import { selectUser } from '../store/authSlice';
 import { invalidateProperties } from '../store/reviewSlice';
 import LoginModal from '../components/LoginModal';
 import useSeo from '../hooks/useSeo';
+import { AnimatePresence, motion, errorVariants, staggerContainer, fadeUp, EASE } from '../animations';
 
 
 const LIMITS = { name: 120, reviewTitle: 120, review: 5000, address: 300 };
@@ -301,16 +302,29 @@ const AddReview = () => {
             <ReviewNavbar />
 
             <main className="flex-1 px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
-                <form
+                {/* The card lands as one object; its sections then fill in.
+                    layout lets it resize smoothly as photos are added and
+                    validation messages appear and clear. */}
+                <motion.form
                     onSubmit={handleSubmit}
                     noValidate
+                    layout
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: EASE }}
                     className="mx-auto w-full max-w-[864px] overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm"
                 >
                     {/* Card Header with accent bar */}
                     <header className="flex items-start justify-between gap-4 border-b border-black/10 px-4 py-5 sm:px-6 sm:py-6">
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-2">
-                                <div aria-hidden="true" className="h-1 w-8 rounded-full bg-[#41B985]" />
+                                <motion.div
+                                    aria-hidden="true"
+                                    className="h-1 w-8 origin-left rounded-full bg-[#41B985]"
+                                    initial={{ scaleX: 0 }}
+                                    animate={{ scaleX: 1 }}
+                                    transition={{ duration: 0.45, ease: EASE, delay: 0.2 }}
+                                />
                                 <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] text-[#41B985] uppercase">
                                     New Review
                                 </span>
@@ -322,42 +336,68 @@ const AddReview = () => {
                                 Share your rental experience to help others make informed decisions
                             </p>
                         </div>
-                        <button
+                        <motion.button
                             type="button"
                             onClick={handleCancel}
                             aria-label="Close and return to property listings"
+                            whileHover={{ rotate: 90 }}
+                            whileTap={{ scale: 0.85 }}
+                            transition={{ duration: 0.2, ease: EASE }}
                             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#0A0A0A] transition-colors hover:bg-slate-100"
                         >
                             <X className="h-4 w-4" aria-hidden="true" />
-                        </button>
+                        </motion.button>
                     </header>
 
-                    <div className="flex flex-col gap-5 sm:gap-6 px-4 py-5 sm:px-6 sm:py-6">
+                    <motion.div
+                        className="flex flex-col gap-5 sm:gap-6 px-4 py-5 sm:px-6 sm:py-6"
+                        initial="hidden"
+                        animate="show"
+                        variants={staggerContainer(0.07, 0.15)}
+                    >
 
-                        {/* Error banner */}
-                        {error && (
-                            <div
-                                role="alert"
-                                className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700"
-                            >
-                                <span aria-hidden="true" className="mt-0.5 shrink-0">⚠</span>
-                                <span>{error}</span>
-                            </div>
-                        )}
+                        {/* Error banner. Height animates so the form below slides
+                            down to make room rather than jumping under the cursor. */}
+                        <AnimatePresence initial={false}>
+                            {error && (
+                                <motion.div
+                                    key="addreview-error"
+                                    role="alert"
+                                    variants={errorVariants}
+                                    initial="hidden"
+                                    animate="show"
+                                    exit="exit"
+                                    className="overflow-hidden"
+                                >
+                                    <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700">
+                                        <span aria-hidden="true" className="mt-0.5 shrink-0">⚠</span>
+                                        <span>{error}</span>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
-                      
-                        {signedInNotice && !error && (
-                            <div
-                                role="status"
-                                className="flex items-start gap-2.5 rounded-lg border border-[#41B985]/30 bg-[#41B985]/10 px-3.5 py-3 text-sm text-[#0A0A0A]"
-                            >
-                                <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#41B985]" aria-hidden="true" />
-                                <span>{signedInNotice}</span>
-                            </div>
-                        )}
+                        <AnimatePresence initial={false}>
+                            {signedInNotice && !error && (
+                                <motion.div
+                                    key="addreview-signedin"
+                                    role="status"
+                                    variants={errorVariants}
+                                    initial="hidden"
+                                    animate="show"
+                                    exit="exit"
+                                    className="overflow-hidden"
+                                >
+                                    <div className="flex items-start gap-2.5 rounded-lg border border-[#41B985]/30 bg-[#41B985]/10 px-3.5 py-3 text-sm text-[#0A0A0A]">
+                                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#41B985]" aria-hidden="true" />
+                                        <span>{signedInNotice}</span>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Property Location */}
-                        <section aria-labelledby="loc-heading" className="flex flex-col gap-4">
+                        <motion.section variants={fadeUp} aria-labelledby="loc-heading" className="flex flex-col gap-4">
                             <SectionTitle id="loc-heading" icon={<MapPin className="h-4 w-4 text-[#41B985]" aria-hidden="true" />}>
                                 Property Location
                             </SectionTitle>
@@ -445,7 +485,7 @@ const AddReview = () => {
                                     </div>
                                 </div>
                             </div>
-                        </section>
+                        </motion.section>
 
                         <hr className="border-black/10" />
 
@@ -553,7 +593,7 @@ const AddReview = () => {
                         <hr className="border-black/10" />
 
                         {/* Identity Verification */}
-                        <section
+                        <motion.section variants={fadeUp}
                             aria-labelledby="id-heading"
                             className="flex flex-col gap-4 rounded-2xl border border-[#41B985]/20 bg-[#41B985]/5 p-4 sm:p-6"
                         >
@@ -690,10 +730,10 @@ const AddReview = () => {
                                     <span className="text-xs text-red-600">{fieldErrors.idFile}</span>
                                 )}
                             </div>
-                        </section>
+                        </motion.section>
 
                         {/* Add Photos */}
-                        <section aria-labelledby="photos-heading" className="flex flex-col gap-3">
+                        <motion.section variants={fadeUp} aria-labelledby="photos-heading" className="flex flex-col gap-3">
                             <SectionTitle id="photos-heading" icon={<ImageIcon className="h-4 w-4 text-[#41B985]" aria-hidden="true" />} size="md">
                                 Add Photos (Optional)
                             </SectionTitle>
@@ -752,7 +792,7 @@ const AddReview = () => {
                                     ))}
                                 </ul>
                             )}
-                        </section>
+                        </motion.section>
 
                         {/* Action buttons */}
                         <div className="flex flex-col-reverse gap-3 border-t border-black/10 pt-4 sm:flex-row">
@@ -771,8 +811,8 @@ const AddReview = () => {
                                 {submitting ? 'Submitting…' : 'Submit Review'}
                             </button>
                         </div>
-                    </div>
-                </form>
+                    </motion.div>
+                </motion.form>
             </main>
 
             <footer className="mt-8 border-t border-black/10 bg-white py-4 text-center">

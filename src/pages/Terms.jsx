@@ -6,6 +6,7 @@ import ReviewNavbar from '../components/ReviewNavbar';
 import useSeo from '../hooks/useSeo';
 import { SITE_URL } from '../config/site';
 import { serializeJsonLd } from '../utils/jsonLd';
+import { Reveal, motion } from '../animations';
 
 // Effective date drives both the visible label AND the JSON-LD `lastReviewed`.
 // Update this whenever you materially change the terms.
@@ -100,9 +101,16 @@ const Terms = () => {
           </nav>
 
           {/* Header */}
-          <header className="text-center mb-10 sm:mb-12 lg:mb-16">
+          <Reveal as="header" className="text-center mb-10 sm:mb-12 lg:mb-16">
             <div className="inline-flex items-center gap-2 mb-3 sm:mb-4">
-              <div aria-hidden="true" className="h-1 w-8 rounded-full bg-[#41B985]" />
+              {/* The brand rule draws itself out from the left. */}
+              <motion.div
+                aria-hidden="true"
+                className="h-1 w-8 origin-left rounded-full bg-[#41B985]"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+              />
               <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] text-[#41B985] uppercase">
                 Legal
               </span>
@@ -116,7 +124,7 @@ const Terms = () => {
                 {EFFECTIVE_DATE_DISPLAY}
               </time>
             </p>
-          </header>
+          </Reveal>
 
           {/* Terms article */}
           <article>
@@ -133,7 +141,7 @@ const Terms = () => {
               {TERMS.map((term, i) => {
                 const Icon = term.icon;
                 return (
-                  <section
+                  <Reveal as="section"
                     key={i}
                     aria-labelledby={`term-${i}`}
                     className="p-5 sm:p-6 lg:p-8 rounded-2xl border border-slate-100 hover:border-[#41B985]/40 hover:shadow-lg hover:shadow-[#41B985]/5 transition-all duration-300 bg-white"
@@ -153,7 +161,7 @@ const Terms = () => {
                     <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
                       {term.content}
                     </p>
-                  </section>
+                  </Reveal>
                 );
               })}
             </div>

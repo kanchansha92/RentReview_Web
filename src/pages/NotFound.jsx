@@ -2,6 +2,9 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Compass, Home, Search } from 'lucide-react';
 import useSeo from '../hooks/useSeo';
+import { motion, staggerContainer, fadeUp } from '../animations';
+
+const MotionLink = motion.create(Link);
 
 
 
@@ -10,15 +13,32 @@ const NotFound = () => {
 
     return (
         <main className="flex min-h-screen flex-col items-center justify-center bg-[#F9FAFB] px-4 py-12 text-center">
-            <div className="flex w-full max-w-md flex-col items-center gap-6">
-                <div
+            <motion.div
+                className="flex w-full max-w-md flex-col items-center gap-6"
+                initial="hidden"
+                animate="show"
+                variants={staggerContainer(0.09, 0.05)}
+            >
+                {/* The compass drifts a few degrees each way -a small hint of
+                    "looking for something" behind an otherwise plain page. */}
+                <motion.div
                     aria-hidden="true"
                     className="flex h-16 w-16 items-center justify-center rounded-full bg-[#F0FDF4] ring-4 ring-[#DCFCE7]"
+                    variants={{
+                        hidden: { opacity: 0, scale: 0.6 },
+                        show: { opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 280, damping: 15 } },
+                    }}
                 >
-                    <Compass className="h-7 w-7 text-[#3EB489]" strokeWidth={2.5} />
-                </div>
+                    <motion.span
+                        className="inline-flex"
+                        animate={{ rotate: [0, -12, 12, 0] }}
+                        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
+                    >
+                        <Compass className="h-7 w-7 text-[#3EB489]" strokeWidth={2.5} />
+                    </motion.span>
+                </motion.div>
 
-                <div className="flex flex-col gap-2">
+                <motion.div variants={fadeUp} className="flex flex-col gap-2">
                     <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-[#3EB489]">
                         404
                     </p>
@@ -29,25 +49,29 @@ const NotFound = () => {
                         The link may be out of date, or the property may have been removed. Everything else is
                         still where you left it.
                     </p>
-                </div>
+                </motion.div>
 
-                <div className="flex w-full flex-col gap-2 sm:flex-row sm:gap-3">
-                    <Link
+                <motion.div variants={fadeUp} className="flex w-full flex-col gap-2 sm:flex-row sm:gap-3">
+                    <MotionLink
                         to="/"
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[#3EB489] px-4 text-sm font-bold text-white shadow-md shadow-emerald-100 transition-all hover:bg-[#35a37b] active:scale-95"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[#3EB489] px-4 text-sm font-bold text-white shadow-md shadow-emerald-100 transition-colors hover:bg-[#35a37b]"
                     >
                         <Home className="h-4 w-4" aria-hidden="true" />
                         Go to homepage
-                    </Link>
-                    <Link
+                    </MotionLink>
+                    <MotionLink
                         to="/write-review"
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg border-2 border-[#3EB489] bg-white px-4 text-sm font-bold text-[#3EB489] transition-all hover:bg-[#F0FDF4] active:scale-95"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg border-2 border-[#3EB489] bg-white px-4 text-sm font-bold text-[#3EB489] transition-colors hover:bg-[#F0FDF4]"
                     >
                         <Search className="h-4 w-4" aria-hidden="true" />
                         Browse properties
-                    </Link>
-                </div>
-            </div>
+                    </MotionLink>
+                </motion.div>
+            </motion.div>
         </main>
     );
 };

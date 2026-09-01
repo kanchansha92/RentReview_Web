@@ -1,5 +1,8 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Reveal, Stagger, StaggerItem, motion, fadeUp } from '../animations';
+
+const MotionLink = motion.create(Link);
 
 
 const platformLinks = [
@@ -44,31 +47,41 @@ const FooterColumn = ({ id, title, navLabel, links }) => {
   };
 
   return (
-    <nav id={id} aria-label={navLabel}>
+    <Reveal as="nav" id={id} aria-label={navLabel}>
       <h3 className="text-base font-semibold mb-4 sm:mb-5 lg:mb-6 text-white">
         {title}
       </h3>
-      <ul className="space-y-3 sm:space-y-4 list-none">
+      {/* Each link nudges right on hover -a 3px shift that makes a dense list
+          of footer links feel responsive without adding any new colour. */}
+      <Stagger as="ul" stagger={0.05} className="space-y-3 sm:space-y-4 list-none">
         {links.map((item) => (
-          <li key={item.id}>
+          <StaggerItem as="li" key={item.id} variants={fadeUp}>
             {item.to ? (
-              <Link id={item.id} to={item.to} className={LINK_CLASS}>
+              <MotionLink
+                id={item.id}
+                to={item.to}
+                className={`${LINK_CLASS} inline-block`}
+                whileHover={{ x: 3 }}
+                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              >
                 {item.label}
-              </Link>
+              </MotionLink>
             ) : (
-              <a
+              <motion.a
                 id={item.id}
                 href={`#${item.hash}`}
                 onClick={(e) => handleHashClick(e, item.hash)}
-                className={`${LINK_CLASS} cursor-pointer`}
+                className={`${LINK_CLASS} cursor-pointer inline-block`}
+                whileHover={{ x: 3 }}
+                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
               >
                 {item.label}
-              </a>
+              </motion.a>
             )}
-          </li>
+          </StaggerItem>
         ))}
-      </ul>
-    </nav>
+      </Stagger>
+    </Reveal>
   );
 };
 
@@ -81,9 +94,17 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 lg:gap-8 mb-10 sm:mb-12">
           {/* Brand Column -spans full width on tablet, single col on desktop */}
-          <div id="footer-brand" className="sm:col-span-2 lg:col-span-1">
+          <Reveal id="footer-brand" className="sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2 mb-2">
-              <div aria-hidden="true" className="h-1 w-8 rounded-full bg-[#41B985]" />
+              {/* The brand rule draws itself out from the left as the footer arrives. */}
+            <motion.div
+              aria-hidden="true"
+              className="h-1 w-8 origin-left rounded-full bg-[#41B985]"
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+            />
               <span className="text-[10px] font-bold tracking-[0.15em] text-[#41B985] uppercase">
                 RentReview
               </span>
@@ -97,7 +118,7 @@ const Footer = () => {
             <p className="text-sm leading-relaxed text-[#D1D5DC] max-w-xs">
               Making rental decisions easier with verified reviews from real tenants.
             </p>
-          </div>
+          </Reveal>
 
           {/* Link Columns */}
           <FooterColumn
@@ -121,14 +142,14 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-6 sm:pt-8 border-t border-[#1E2939] text-center">
+        <Reveal className="pt-6 sm:pt-8 border-t border-[#1E2939] text-center">
           <p className="text-xs sm:text-sm text-[#D1D5DC]">
             © {new Date().getFullYear()} RentReview. All rights reserved.{' '}
             <span className="block sm:inline mt-1 sm:mt-0 text-[#9CA3AF]">
               Building trust in the rental community.
             </span>
           </p>
-        </div>
+        </Reveal>
       </div>
     </footer>
   );

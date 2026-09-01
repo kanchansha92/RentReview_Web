@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { Loader2 } from 'lucide-react';
+import { motion } from '../animations';
 import { API_BASE_URL, STORAGE_KEYS } from '../config/api';
 import { loginSuccess } from '../store/authSlice';
 import useSeo from '../hooks/useSeo';
@@ -99,9 +100,18 @@ const AuthSuccess = () => {
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-[#F9FAFB]">
-            <Loader2 className="w-12 h-12 text-[#41B985] animate-spin mb-4" />
-            <h1 className="text-xl font-semibold text-[#0A0A0A]">Completing Authentication...</h1>
-            <p className="text-[#717182]">Please wait while we set up your session.</p>
+            {/* A brief hold before fading in: this screen usually lasts under a
+                second, and a message that flashes reads worse than none. */}
+            <motion.div
+                className="flex flex-col items-center"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+            >
+                <Loader2 className="w-12 h-12 text-[#41B985] animate-spin mb-4" />
+                <h1 className="text-xl font-semibold text-[#0A0A0A]">Completing Authentication...</h1>
+                <p className="text-[#717182]">Please wait while we set up your session.</p>
+            </motion.div>
         </div>
     );
 };

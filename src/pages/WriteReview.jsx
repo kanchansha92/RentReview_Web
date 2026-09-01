@@ -10,6 +10,9 @@ import { API_BASE_URL } from '../config/api';
 import { serializeJsonLd } from '../utils/jsonLd';
 import useSeo from '../hooks/useSeo';
 import { SITE_URL } from '../config/site';
+import { motion, staggerContainer, fadeUp } from '../animations';
+
+const MotionLink = motion.create(Link);
 
 // Uploaded images are served from the backend root (/uploads/...), not the
 // frontend dev server -so prefix relative paths with the backend origin.
@@ -293,14 +296,23 @@ const WriteReview = () => {
           </div>
         )}
 
-        {/* Property grid -semantic list */}
-        <ul
+        {/* Property grid -semantic list. The <motion.ul> renders the same <ul>;
+            it only puts the tiles on one shared arrival timeline. `key` on the
+            result count restarts that timeline when a search changes the set,
+            so filtered results animate in rather than snapping. */}
+        <motion.ul
+          key={`grid-${normalizedSearch}-${filteredProperties.length}`}
           aria-label="Property listings"
+          initial="hidden"
+          animate="show"
+          variants={staggerContainer(0.06)}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 list-none"
         >
           {/* Add Review card -CTA tile, always first */}
-          <li>
-            <Link
+          <motion.li variants={fadeUp}>
+            <MotionLink
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               to={addReviewUrl}
               aria-label={normalizedSearch
                 ? `Add a review for ${searchTerm.trim()}`
@@ -311,26 +323,28 @@ const WriteReview = () => {
                 <Plus className="w-6 h-6 sm:w-8 sm:h-8" aria-hidden="true" />
               </div>
               <span className="text-base sm:text-lg font-bold text-[#3EB489] tracking-tight">Add Review</span>
-            </Link>
-          </li>
+            </MotionLink>
+          </motion.li>
 
           {/* Loading skeletons */}
           {loading && [1, 2].map((n) => (
-            <li key={`skeleton-${n}`}>
+            <motion.li variants={fadeUp} key={`skeleton-${n}`}>
               <div
                 aria-hidden="true"
                 className="aspect-[4/3] rounded-2xl border border-slate-100 bg-white shadow-sm flex items-center justify-center"
               >
                 <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
               </div>
-            </li>
+            </motion.li>
           ))}
 
           {/* Properties from the API */}
           {!loading && filteredProperties.map((item) => (
-            <li key={item._id}>
-              <Link
+            <motion.li variants={fadeUp} key={item._id}>
+              <MotionLink
                 to={`/property/${item._id}`}
+                whileHover={{ y: -4 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                 className="flex flex-col h-full bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden group hover:shadow-md transition-shadow"
               >
                 {/* Image with fallback */}
@@ -385,13 +399,13 @@ const WriteReview = () => {
                     )}
                   </div>
                 </div>
-              </Link>
-            </li>
+              </MotionLink>
+            </motion.li>
           ))}
 
           {/* Empty states -three branches */}
           {emptyState === 'empty-db' && (
-            <li className="col-span-1 sm:col-span-2 lg:col-span-3">
+            <motion.li variants={fadeUp} className="col-span-1 sm:col-span-2 lg:col-span-3">
               <div className="flex flex-col items-center justify-center text-center bg-white border border-dashed border-slate-200 rounded-2xl p-8 sm:p-12 gap-3 sm:gap-4">
                 <div aria-hidden="true" className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#3EB489]/10 flex items-center justify-center">
                   <Home className="w-7 h-7 sm:w-8 sm:h-8 text-[#3EB489]" />
@@ -408,11 +422,11 @@ const WriteReview = () => {
                   Write the First Review
                 </Link>
               </div>
-            </li>
+            </motion.li>
           )}
 
           {emptyState === 'search-no-match' && (
-            <li className="col-span-1 sm:col-span-2 lg:col-span-3">
+            <motion.li variants={fadeUp} className="col-span-1 sm:col-span-2 lg:col-span-3">
               <div className="flex flex-col items-center justify-center text-center bg-white border border-dashed border-slate-200 rounded-2xl p-8 sm:p-12 gap-3 sm:gap-4">
                 <div aria-hidden="true" className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-amber-50 flex items-center justify-center">
                   <SearchX className="w-7 h-7 sm:w-8 sm:h-8 text-amber-500" />
@@ -440,11 +454,11 @@ const WriteReview = () => {
                   </button>
                 </div>
               </div>
-            </li>
+            </motion.li>
           )}
 
           {emptyState === 'filter-no-match' && (
-            <li className="col-span-1 sm:col-span-2 lg:col-span-3">
+            <motion.li variants={fadeUp} className="col-span-1 sm:col-span-2 lg:col-span-3">
               <div className="flex flex-col items-center justify-center text-center bg-white border border-dashed border-slate-200 rounded-2xl p-8 sm:p-12 gap-3 sm:gap-4">
                 <div aria-hidden="true" className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
                   <SearchX className="w-7 h-7 sm:w-8 sm:h-8 text-slate-500" />
@@ -463,13 +477,17 @@ const WriteReview = () => {
                   Show All Types
                 </button>
               </div>
-            </li>
+            </motion.li>
           )}
 
           {/* Sponsored ads (local, always visible -even on empty states) */}
           {!loading && sponsoredAds.map((item) => (
-            <li key={item.id}>
-              <article className="flex flex-col h-full bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden group hover:shadow-md transition-shadow">
+            <motion.li variants={fadeUp} key={item.id}>
+              <motion.article
+                whileHover={{ y: -4 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                className="flex flex-col h-full bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden group hover:shadow-md transition-shadow"
+              >
                 <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-100">
                   <img
                     src={item.image}
@@ -502,10 +520,10 @@ const WriteReview = () => {
                     </button>
                   </div>
                 </div>
-              </article>
-            </li>
+              </motion.article>
+            </motion.li>
           ))}
-        </ul>
+        </motion.ul>
 
         {/* JSON-LD structured data -helps Google understand this is a property directory */}
         {listSchema && (

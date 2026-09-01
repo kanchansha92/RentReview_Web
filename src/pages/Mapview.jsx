@@ -8,6 +8,7 @@ import ReviewNavbar from '../components/ReviewNavbar';
 import { API_BASE_URL } from '../config/api';
 import { fetchProperties, selectProperties, selectPropertiesStatus, selectPropertiesError, selectPropertiesTotal } from '../store/reviewSlice';
 import useSeo from '../hooks/useSeo';
+import { AnimatePresence, motion, EASE } from '../animations';
 
 const BENGALURU_CENTER = [12.9716, 77.5946];
 
@@ -199,11 +200,21 @@ const MapView = () => {
                 <main className="min-h-0 flex-1 px-4 py-4 sm:px-6 lg:px-[42.5px]">
                     <div className="relative h-full w-full overflow-hidden rounded-[10px] border border-black/10 bg-[#DDDDDD]">
 
-                        {loading && (
-                            <div className="absolute inset-0 z-[500] flex items-center justify-center gap-2 bg-[#DDDDDD] text-sm text-slate-500">
-                                <Loader2 className="h-5 w-5 animate-spin" /> Loading map…
-                            </div>
-                        )}
+                        {/* The loading veil fades out rather than cutting, so
+                            the map underneath is revealed instead of popping. */}
+                        <AnimatePresence>
+                            {loading && (
+                                <motion.div
+                                    key="map-loading"
+                                    initial={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.35, ease: EASE }}
+                                    className="absolute inset-0 z-[500] flex items-center justify-center gap-2 bg-[#DDDDDD] text-sm text-slate-500"
+                                >
+                                    <Loader2 className="h-5 w-5 animate-spin" /> Loading map…
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {error && !loading && (
                             <div className="absolute inset-0 z-[500] flex items-center justify-center bg-[#F9FAFB] p-8 text-center">
@@ -215,31 +226,57 @@ const MapView = () => {
                             </div>
                         )}
 
+                        {/* Status chips slide down from the map's edge and back
+                            out again, so one appearing or leaving never reads as
+                            a flicker over the tiles. */}
+                        <AnimatePresence>
                         {!loading && locating > 0 && (
-                            <div className="absolute right-3 top-3 z-[500] flex items-center gap-2 rounded-lg bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-600 shadow">
+                            <motion.div
+                                key="map-locating"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.22, ease: EASE }}
+                                className="absolute right-3 top-3 z-[500] flex items-center gap-2 rounded-lg bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-600 shadow"
+                            >
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Locating {locating} propert{locating === 1 ? 'y' : 'ies'}…
-                            </div>
+                            </motion.div>
                         )}
+                        </AnimatePresence>
 
+                        <AnimatePresence>
                         {!loading && truncated && (
-                            <div
+                            <motion.div
+                                key="map-truncated"
                                 role="status"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.22, ease: EASE }}
                                 className="absolute left-3 top-3 z-[500] flex items-center gap-2 rounded-lg bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-600 shadow"
                             >
                                 <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
                                 Showing {propertyList.length} of {propertiesTotal} properties
-                            </div>
+                            </motion.div>
                         )}
+                        </AnimatePresence>
 
+                        <AnimatePresence>
                         {!loading && locating === 0 && unplaceable > 0 && (
-                            <div
+                            <motion.div
+                                key="map-unplaceable"
                                 role="status"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.22, ease: EASE }}
                                 className="absolute right-3 top-3 z-[500] flex items-center gap-2 rounded-lg bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-600 shadow"
                             >
                                 <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
                                 {unplaceable} propert{unplaceable === 1 ? 'y' : 'ies'} couldn't be placed on the map
-                            </div>
+                            </motion.div>
                         )}
+                        </AnimatePresence>
 
                         <MapContainer center={BENGALURU_CENTER} zoom={12} scrollWheelZoom style={{ height: '100%', width: '100%' }}>
                             <TileLayer

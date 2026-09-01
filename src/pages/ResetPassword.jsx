@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Home, Loader2, CheckCircle2 } from 'lucide-react';
 import { BASE_URL } from '../constants';
 import useSeo from '../hooks/useSeo';
+import { motion } from '../animations';
 
 const ResetPassword = () => {
     // Carries a single-use token in the URL -never indexable, and there's no
@@ -54,7 +55,14 @@ const ResetPassword = () => {
 
     return (
         <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center p-4">
-            <div className="w-full max-w-[440px] bg-white rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.2)] p-8 flex flex-col items-center gap-6">
+            {/* The card lands with a small spring so the page has a focal
+                point the moment it opens. */}
+            <motion.div
+                className="w-full max-w-[440px] bg-white rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.2)] p-8 flex flex-col items-center gap-6"
+                initial={{ opacity: 0, y: 18, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 240, damping: 22 }}
+            >
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
                     <div className="w-9 h-9 bg-[#41B985] rounded-xl flex items-center justify-center shadow">
@@ -151,7 +159,7 @@ const ResetPassword = () => {
                         </Link>
                     </>
                 )}
-            </div>
+            </motion.div>
         </div>
     );
 };

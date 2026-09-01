@@ -1,7 +1,9 @@
 import React, { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
+import { MotionConfig, motion, AnimatePresence } from 'motion/react'
 import { Loader2 } from 'lucide-react'
+import { pageVariants } from './animations'
 import Home from './pages/Home'
 import ProtectedRoute from './components/Protectedroute'
 import { logoutSuccess, loginSuccess } from './store/authSlice'
@@ -39,12 +41,85 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 
 // Shown while a route chunk is in flight. Deliberately plain — a heavy skeleton
 // here flashes on fast connections and reads as jank.
+//
+// The fallback itself fades in after a beat rather than appearing instantly:
+// on a warm cache the chunk resolves in well under 200ms, and a spinner that
+// blinks in and straight back out is worse than no spinner at all.
 const RouteFallback = () => (
-  <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB]" role="status" aria-live="polite">
+  <motion.div
+    className="flex min-h-screen items-center justify-center bg-[#F9FAFB]"
+    role="status"
+    aria-live="polite"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.2, delay: 0.25 }}
+  >
     <Loader2 className="h-8 w-8 animate-spin text-[#41B985]" aria-hidden="true" />
     <span className="sr-only">Loading…</span>
-  </div>
+  </motion.div>
 )
+
+// ── Page transitions ──────────────────────────────────────────────────────
+// Wrapping the route *element* rather than editing each page's root keeps the
+// transition in one place and leaves every page's own markup untouched.
+//
+// The wrapper is a plain block box, so it is invisible to layout: pages keep
+// their own min-h-screen roots and their sticky navbars behave as before.
+// Motion resets `transform` to `none` once the animation lands, so the brief
+// translate never becomes a containing block for the `position: fixed` modals
+// these pages render.
+//
+// Motion is short and small on purpose (8px + opacity, ~0.3s): a route change
+// already costs the reader their place, and a big movement on top of that
+// reads as lag rather than polish.
+const Page = ({ children }) => (
+  <motion.div variants={pageVariants} initial="hidden" animate="show" exit="exit">
+    {children}
+  </motion.div>
+)
+
+// AnimatePresence needs a key that changes per route to run enter/exit. It sits
+// inside Suspense so a lazy chunk that is still loading shows the fallback
+// rather than an empty animated box.
+const AnimatedRoutes = () => {
+  const location = useLocation()
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<Page><Home /></Page>} />
+        <Route path="/signin" element={<Page><SignIn /></Page>} />
+        <Route path="/signup" element={<Page><SignUp /></Page>} />
+        {/* PUBLIC: despite the name, /write-review is the property browse/search
+            grid (the submission form is /add-review). It is linked from the hero
+            search, the footer and the JSON-LD SearchAction, so it must stay
+            crawlable and reachable by signed-out visitors. */}
+        <Route path="/write-review" element={<Page><WriteReview /></Page>} />
+        <Route path="/add-review" element={<Page><ProtectedRoute><AddReview /></ProtectedRoute></Page>} />
+        <Route path="/map" element={<Page><MapView /></Page>} />
+        <Route path="/property/:id" element={<Page><PropertyDetail /></Page>} />
+        <Route path="/about" element={<Page><About /></Page>} />
+        <Route path="/privacy" element={<Page><Privacy /></Page>} />
+        <Route path="/terms" element={<Page><Terms /></Page>} />
+        <Route path="/help" element={<Page><Help /></Page>} />
+        <Route path="/contact" element={<Page><Contact /></Page>} />
+        <Route path="/guidelines" element={<Page><Guidelines /></Page>} />
+        <Route path="/profile" element={<Page><ProtectedRoute><Profile /></ProtectedRoute></Page>} />
+
+        <Route path="/settings" element={<Page><ProtectedRoute><Settings /></ProtectedRoute></Page>} />
+        <Route path="/my-reviews" element={<Page><ProtectedRoute><MyReviews /></ProtectedRoute></Page>} />
+        <Route path="/auth-success" element={<Page><AuthSuccess /></Page>} />
+        <Route path="/reset-password/:token" element={<Page><ResetPassword /></Page>} />
+        <Route path="/verify-email/:token" element={<Page><VerifyEmail /></Page>} />
+
+        <Route path="/admin" element={<Page><ProtectedRoute><AdminDashboard /></ProtectedRoute></Page>} />
+        <Route path="/admin/verifications" element={<Page><ProtectedRoute><AdminVerifications /></ProtectedRoute></Page>} />
+
+        <Route path="*" element={<Page><NotFound /></Page>} />
+      </Routes>
+    </AnimatePresence>
+  )
+}
 
 // ── Cross-tab auth sync ───────────────────────────────────────────────────
 // Sign out (or in) in another tab and every other tab follows. This lives at
@@ -122,44 +197,23 @@ const ScrollToTop = () => {
 
 const App = () => {
   return (
+    // ── Motion, app-wide ──────────────────────────────────────────────────
+    // reducedMotion="user" makes every Motion animation in the app respect the
+    // OS-level "reduce motion" setting automatically: transforms and layout
+    // animations are skipped, opacity still cross-fades. Set once here so no
+    // individual component has to remember it.
+    //
+    // `transition` is the house default for anything that doesn't name its own
+    // — see src/animations/variants.js for the shared vocabulary.
+    <MotionConfig reducedMotion="user" transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}>
     <Router>
       <CrossTabAuthSync />
       <ScrollToTop />
       <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
-          {/* PUBLIC: despite the name, /write-review is the property browse/search
-              grid (the submission form is /add-review). It is linked from the hero
-              search, the footer and the JSON-LD SearchAction, so it must stay
-              crawlable and reachable by signed-out visitors. */}
-          <Route path="/write-review" element={<WriteReview />} />
-          <Route path="/add-review" element={<ProtectedRoute><AddReview /></ProtectedRoute>} />
-          <Route path="/map" element={<MapView />} />
-          <Route path="/property/:id" element={<PropertyDetail />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/help" element={<Help />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/guidelines" element={<Guidelines />} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/my-reviews" element={<ProtectedRoute><MyReviews /></ProtectedRoute>} />
-          <Route path="/auth-success" element={<AuthSuccess />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-          <Route path="/verify-email/:token" element={<VerifyEmail />} />
-       
-          <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/admin/verifications" element={<ProtectedRoute><AdminVerifications /></ProtectedRoute>} />
-   
-        
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AnimatedRoutes />
       </Suspense>
     </Router>
+    </MotionConfig>
   )
 }
 

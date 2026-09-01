@@ -10,6 +10,7 @@ import { API_BASE_URL } from '../config/api';
 import { serializeJsonLd } from '../utils/jsonLd';
 import useSeo from '../hooks/useSeo';
 import { SITE_URL } from '../config/site';
+import { Stagger, StaggerItem, motion, fadeUp, EASE } from '../animations';
 
 // Uploaded files are served from the server root (/uploads/...), not /api
 const SERVER_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
@@ -249,8 +250,14 @@ const PropertyDetail = () => {
 
                         {/* ── Hero: image (left) + info (right) on lg+ ─────────────── */}
                         <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
-                            {/* Image */}
-                            <div className="relative h-56 sm:h-64 lg:h-auto lg:min-h-[400px] w-full overflow-hidden rounded-2xl bg-slate-100 shadow-sm">
+                            {/* Image -slides in from the left, info from the right,
+                                so the two halves visibly belong to one card. */}
+                            <motion.div
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.45, ease: EASE }}
+                                className="relative h-56 sm:h-64 lg:h-auto lg:min-h-[400px] w-full overflow-hidden rounded-2xl bg-slate-100 shadow-sm"
+                            >
                                 {property.image ? (
                                     <img
                                         src={resolveUpload(property.image)}
@@ -267,10 +274,15 @@ const PropertyDetail = () => {
                                         <Home className="h-14 w-14" />
                                     </div>
                                 )}
-                            </div>
+                            </motion.div>
 
                             {/* Info column */}
-                            <div className="flex flex-col gap-4">
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.45, ease: EASE, delay: 0.08 }}
+                                className="flex flex-col gap-4"
+                            >
                                 {/* Title + location */}
                                 <header>
                                     <h1 className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight text-[#0A0A0A]">
@@ -366,7 +378,7 @@ const PropertyDetail = () => {
                                         Review This Property
                                     </button>
                                 </div>
-                            </div>
+                            </motion.div>
                         </div>
 
                         {/* ── Reviews ───────────────────────────────────────────── */}
@@ -399,13 +411,16 @@ const PropertyDetail = () => {
                                 </div>
                             ) : (
                                 <>
-                                    <ul className="flex flex-col gap-3 sm:gap-4 list-none">
+                                    {/* Reviews arrive in sequence as they scroll
+                                        into view -one shared timeline, so a long
+                                        list reads as a feed rather than a dump. */}
+                                    <Stagger as="ul" stagger={0.07} amount={0.05} className="flex flex-col gap-3 sm:gap-4 list-none">
                                         {reviews.map((r) => (
-                                            <li key={r._id}>
+                                            <StaggerItem as="li" variants={fadeUp} key={r._id}>
                                                 <ReviewCard review={r} />
-                                            </li>
+                                            </StaggerItem>
                                         ))}
-                                    </ul>
+                                    </Stagger>
                                     {/* One page of reviews is all this endpoint returns.
                                         Say so, rather than letting the list look complete. */}
                                     {truncated && (

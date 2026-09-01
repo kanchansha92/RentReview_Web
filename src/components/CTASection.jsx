@@ -2,6 +2,9 @@ import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectUser } from '../store/authSlice';
+import { Stagger, StaggerItem, motion, fadeUp, EASE } from '../animations';
+
+const MotionLink = motion.create(Link);
 
 const CTASection = () => {
   const navigate = useNavigate();
@@ -16,9 +19,32 @@ const CTASection = () => {
       aria-labelledby="cta-heading"
       className="relative overflow-hidden bg-[#41B985] px-4 py-12 text-center text-white sm:px-6 sm:py-14 md:py-16 lg:px-8 lg:py-20"
     >
-      <div className="mx-auto flex max-w-4xl flex-col items-center">
-        {/* Decorative house icon */}
-        <div className="mb-6 sm:mb-7 lg:mb-8" aria-hidden="true">
+      {/* Two soft radial washes that drift behind the copy. Pure decoration,
+          very low contrast, and blur-only so they cost nothing to composite. */}
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl"
+        animate={{ x: [0, 30, 0], y: [0, 20, 0] }}
+        transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-white/10 blur-3xl"
+        animate={{ x: [0, -25, 0], y: [0, -20, 0] }}
+        transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+      />
+
+      <Stagger className="relative mx-auto flex max-w-4xl flex-col items-center" stagger={0.1}>
+        {/* Decorative house icon -draws itself in, then breathes gently */}
+        <StaggerItem
+          as="div"
+          className="mb-6 sm:mb-7 lg:mb-8"
+          aria-hidden="true"
+          variants={{
+            hidden: { opacity: 0, scale: 0.7, y: 10 },
+            show: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 220, damping: 16 } },
+          }}
+        >
           <svg
             className="h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16"
             viewBox="0 0 64 64"
@@ -39,26 +65,31 @@ const CTASection = () => {
               strokeLinejoin="round"
             />
           </svg>
-        </div>
+        </StaggerItem>
 
         {/* Heading */}
-        <h2
+        <StaggerItem
+          as="h2"
           id="cta-heading"
+          variants={fadeUp}
           className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl lg:text-4xl"
         >
           Ready to Share Your Experience?
-        </h2>
+        </StaggerItem>
 
         {/* Subheading */}
-        <p className="mt-4 max-w-3xl text-base text-white/90 sm:mt-5 sm:text-lg lg:text-xl">
+        <StaggerItem as="p" variants={fadeUp} className="mt-4 max-w-3xl text-base text-white/90 sm:mt-5 sm:text-lg lg:text-xl">
           Join thousands of renters making smarter housing decisions. Add your honest review about your rental property today.
-        </p>
+        </StaggerItem>
 
         {/* CTA buttons -stack on mobile, side-by-side on sm+ */}
-        <div className="mt-8 flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4 lg:mt-10">
-          <button
+        <StaggerItem as="div" variants={fadeUp} className="mt-8 flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4 lg:mt-10">
+          <motion.button
             type="button"
             onClick={handleWriteReviewClick}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.18, ease: EASE }}
             className="group inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-white px-6 py-3 text-base font-medium text-[#030213] transition-colors hover:bg-slate-50 sm:px-8 sm:py-4 sm:text-lg"
           >
             Write a Review
@@ -73,23 +104,27 @@ const CTASection = () => {
               <path d="M3.3335 8H12.6668" stroke="#030213" strokeWidth="1.33306" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M8 3.33334L12.6667 8L8 12.6667" stroke="#030213" strokeWidth="1.33306" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </button>
+          </motion.button>
 
-          {/* Use <Link> for Browse Reviews -pure navigation, crawler-friendly */}
-          <Link
+          {/* Use <Link> for Browse Reviews -pure navigation, crawler-friendly.
+              motion.create() keeps the real <a href> the crawler needs. */}
+          <MotionLink
             to="/write-review"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.18, ease: EASE }}
             className="inline-flex items-center justify-center rounded-lg border border-white/60 bg-white/10 px-6 py-3 text-base font-medium text-white transition-colors hover:bg-white/20 sm:px-8 sm:py-4 sm:text-lg"
           >
             Browse Reviews
-          </Link>
-        </div>
+          </MotionLink>
+        </StaggerItem>
 
         {/* Trust-signal line */}
-        <p className="mt-6 text-xs text-white/80 sm:text-sm lg:mt-8">
+        <StaggerItem as="p" variants={fadeUp} className="mt-6 text-xs text-white/80 sm:text-sm lg:mt-8">
           No credit card required <span aria-hidden="true">•</span> Free forever{' '}
           <span aria-hidden="true">•</span> Anonymous option available
-        </p>
-      </div>
+        </StaggerItem>
+      </Stagger>
     </section>
   );
 };

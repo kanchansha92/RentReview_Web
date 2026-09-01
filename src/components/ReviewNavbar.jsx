@@ -6,6 +6,7 @@ import { logoutSuccess, loginSuccess, selectUser } from '../store/authSlice'
 import { clearReviewData } from '../store/reviewSlice'
 import LoginModal from './LoginModal'
 import SignupModal from './SignupModal'
+import { motion, AnimatePresence, dropdownVariants, EASE } from '../animations'
 
 const ReviewNavbar = () => {
   const navigate = useNavigate()
@@ -82,9 +83,12 @@ const ReviewNavbar = () => {
           Leaflet map on /map -Leaflet's panes sit at z-index 400 and its
           controls at 1000, so anything with a lower z-index gets painted
           over by the map. */}
-      <nav
+      <motion.nav
         aria-label="Site navigation"
         className="relative z-[1100] border-b border-slate-200 bg-white"
+        initial={{ y: -56, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.4, ease: EASE }}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
           {/* Logo */}
@@ -93,14 +97,18 @@ const ReviewNavbar = () => {
             aria-label="RentReview -go to home"
             className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-90"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#3EB489] text-white shadow-lg shadow-emerald-100 sm:h-10 sm:w-10">
+            <motion.div
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#3EB489] text-white shadow-lg shadow-emerald-100 sm:h-10 sm:w-10"
+              whileHover={{ rotate: -8, scale: 1.06 }}
+              transition={{ type: 'spring', stiffness: 340, damping: 16 }}
+            >
               <Home
                 className="h-5 w-5 sm:h-[22px] sm:w-[22px]"
                 fill="currentColor"
                 fillOpacity={0.2}
                 aria-hidden="true"
               />
-            </div>
+            </motion.div>
             <span className="text-base font-bold tracking-tight text-slate-800 sm:text-xl">
               Rent<span className="text-[#3EB489]">Review</span>
             </span>
@@ -129,15 +137,18 @@ const ReviewNavbar = () => {
             </Link>
 
             {/* Write a Review CTA -auth-gated */}
-            <button
+            <motion.button
               type="button"
               onClick={handleWriteReview}
               aria-label="Write a review"
-              className="flex items-center gap-2 rounded-xl bg-[#3EB489] px-3 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-100 transition-all hover:bg-[#35a37b] hover:shadow-emerald-200 active:scale-95 sm:px-5 sm:py-2.5"
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ duration: 0.18, ease: EASE }}
+              className="flex items-center gap-2 rounded-xl bg-[#3EB489] px-3 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-100 transition-colors hover:bg-[#35a37b] sm:px-5 sm:py-2.5"
             >
               <PlusCircle size={16} aria-hidden="true" />
               <span className="hidden sm:inline">Write a Review</span>
-            </button>
+            </motion.button>
 
             {/* Profile / Sign in */}
             <div className="relative" ref={menuRef}>
@@ -152,17 +163,26 @@ const ReviewNavbar = () => {
                 <User size={18} className="text-slate-500" aria-hidden="true" />
                 <span className="hidden sm:inline">Profile</span>
                 {user && (
-                  <ChevronDown
-                    size={14}
-                    className={`hidden text-slate-400 transition-transform duration-200 sm:block ${menuOpen ? 'rotate-180' : ''}`}
+                  <motion.span
+                    className="hidden sm:block"
+                    animate={{ rotate: menuOpen ? 180 : 0 }}
+                    transition={{ duration: 0.2, ease: EASE }}
                     aria-hidden="true"
-                  />
+                  >
+                    <ChevronDown size={14} className="text-slate-400" />
+                  </motion.span>
                 )}
               </button>
 
+              <AnimatePresence>
               {user && menuOpen && (
-                <div
+                <motion.div
+                  key="review-profile-menu"
                   role="menu"
+                  variants={dropdownVariants}
+                  initial="hidden"
+                  animate="show"
+                  exit="exit"
                   className="absolute right-0 top-full z-100 mt-5.5 w-56 origin-top-right overflow-hidden rounded-xl border border-slate-100 bg-white py-1.5 shadow-xl shadow-slate-200/60 sm:w-60"
                 >
                   {/* User info header */}
@@ -218,16 +238,19 @@ const ReviewNavbar = () => {
                     <LogOut size={16} aria-hidden="true" />
                     Sign Out
                   </button>
-                </div>
+                </motion.div>
               )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
-      </nav>
+      </motion.nav>
 
-      {/* Auth modals */}
+      {/* Auth modals -AnimatePresence lets them animate out on close */}
+      <AnimatePresence>
       {showLoginModal && (
         <LoginModal
+          key="review-login-modal"
           onClose={dismissAuth}
           onSwitchToSignup={() => {
             setShowLoginModal(false)
@@ -236,8 +259,11 @@ const ReviewNavbar = () => {
           onSuccess={handleAuthSuccess}
         />
       )}
+      </AnimatePresence>
+      <AnimatePresence>
       {showSignupModal && (
         <SignupModal
+          key="review-signup-modal"
           onClose={dismissAuth}
           onSwitchToLogin={() => {
             setShowSignupModal(false)
@@ -246,6 +272,7 @@ const ReviewNavbar = () => {
           onSuccess={handleAuthSuccess}
         />
       )}
+      </AnimatePresence>
     </>
   )
 }
