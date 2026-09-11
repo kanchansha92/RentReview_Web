@@ -30,6 +30,7 @@ import {
   Home,
   AlertTriangle,
   RefreshCw,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import ReviewNavbar from '../components/ReviewNavbar';
 import { useDialogA11y } from '../components/LoginModal';
@@ -55,7 +56,14 @@ const Profile = () => {
   const [loadingUser, setLoadingUser] = useState(true);
   const [activeTab, setActiveTab] = useState('reviews');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', email: '' });
+  // `currentPassword` is only sent when the address actually changes the
+  // server requires it then, and asking for it on a name-only edit would be
+  // friction for nothing.
+  const [editForm, setEditForm] = useState({ name: '', email: '', currentPassword: '' });
+  const [editError, setEditError] = useState('');
+  // Set when the server parks an email change pending confirmation, so the
+  // modal can say what actually happened rather than "profile updated".
+  const [emailPending, setEmailPending] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const nameInputRef = useRef(null);
   const editDialogRef = useRef(null);
@@ -86,7 +94,7 @@ const Profile = () => {
       }
       // Render immediately from the cached user, then refresh from the server.
       setUser(currentUser);
-      setEditForm({ name: currentUser.name || '', email: currentUser.email || '' });
+      setEditForm({ name: currentUser.name || '', email: currentUser.email || '', currentPassword: '' });
 
       try {
         const freshUser = await getMe();
@@ -94,7 +102,7 @@ const Profile = () => {
         if (ignore || saveVersionRef.current !== versionAtStart) return;
         if (freshUser) {
           setUser(freshUser);
-          setEditForm({ name: freshUser.name || '', email: freshUser.email || '' });
+          setEditForm({ name: freshUser.name || '', email: freshUser.email || '', currentPassword: '' });
         }
       } catch (error) {
         console.error('Error loading profile data:', error);
@@ -139,9 +147,9 @@ const Profile = () => {
     };
   }, [isEditModalOpen]);
 
-  const handleLogout = () => {
-  
-    logout();
+  const handleLogout = async () => {
+    // Await it: the cookie is the session, and only the server can clear it.
+    await logout();
     dispatch(logoutSuccess());
     dispatch(clearReviewData());
     navigate('/');
@@ -175,11 +183,29 @@ const Profile = () => {
     }
   };
 
+  // Drives both the password prompt in the modal and the payload shape.
+  const emailChanging =
+    (editForm.email || '').trim().toLowerCase() !== (user?.email || '').toLowerCase();
+
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+    setEditError('');
+
+    // Mirror the server's rule so the user finds out before a round trip.
+    if (emailChanging && !editForm.currentPassword) {
+      setEditError('Enter your current password to change your email address.');
+      return;
+    }
+
     setIsUpdating(true);
     try {
-      const result = await updateUserProfile(editForm);
+      // Only send the password when it is actually needed.
+      const payload = emailChanging
+        ? { name: editForm.name, email: editForm.email, currentPassword: editForm.currentPassword }
+        : { name: editForm.name };
+
+      const result = await updateUserProfile(payload);
+
       if (result.success) {
         // Invalidate any in-flight getMe() so it can't restore the old values.
         saveVersionRef.current += 1;
@@ -187,13 +213,30 @@ const Profile = () => {
         // Keep Redux (and therefore the navbar) in sync -otherwise the old
         // name stays visible until a hard refresh.
         dispatch(updateUser(result.user));
-        setIsEditModalOpen(false);
-        alert('Profile updated successfully!');
+        setEditForm((prev) => ({ ...prev, currentPassword: '' }));
+
+        if (result.emailChangePending) {
+          // The address has NOT changed yet, so keep the modal open and say so.
+          // Closing it with "updated!" would be a lie nothing moves until the
+          // new inbox confirms it.
+          setEmailPending(editForm.email.trim());
+          // Put the field back to the address that is still in force. Leaving
+          // the typed one there would show a password prompt beside "we've sent
+          // you a link", as if the change still needed doing.
+          setEditForm((prev) => ({
+            ...prev,
+            email: result.user?.email || user?.email || '',
+            currentPassword: '',
+          }));
+        } else {
+          setIsEditModalOpen(false);
+          alert('Profile updated successfully!');
+        }
       } else {
-        alert(result.message || 'Failed to update profile');
+        setEditError(result.message || 'Failed to update profile');
       }
     } catch (error) {
-      alert('Error updating profile: ' + error.message);
+      setEditError(error.message || 'Something went wrong. Please try again.');
     } finally {
       setIsUpdating(false);
     }
@@ -308,13 +351,32 @@ const Profile = () => {
               <div className="pb-2 sm:pb-3 lg:pb-4 flex gap-2 sm:gap-3 shrink-0">
                 <button
                   type="button"
-                  onClick={() => setIsEditModalOpen(true)}
+                  onClick={() => {
+                    setEditForm({
+                      name: user?.name || '',
+                      email: user?.email || '',
+                      currentPassword: '',
+                    });
+                    setEditError('');
+                    setEmailPending('');
+                    setIsEditModalOpen(true);
+                  }}
                   className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 lg:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-white border border-[#E2E8F0] font-black text-sm sm:text-base text-[#0F172A] hover:bg-slate-50 transition-all shadow-sm active:scale-95 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3EB489] focus-visible:ring-offset-2"
                 >
                   <Edit3 size={16} aria-hidden="true" className="sm:hidden" />
                   <Edit3 size={18} aria-hidden="true" className="hidden sm:block" />
                   Edit Profile
                 </button>
+                {/* Account settings live on their own page; the dropdown entry
+                    is easy to miss from here, so mirror it next to Edit. */}
+                <Link
+                  to="/settings"
+                  className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 lg:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-white border border-[#E2E8F0] font-black text-sm sm:text-base text-[#0F172A] hover:bg-slate-50 transition-all shadow-sm active:scale-95 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3EB489] focus-visible:ring-offset-2"
+                >
+                  <SettingsIcon size={16} aria-hidden="true" className="sm:hidden" />
+                  <SettingsIcon size={18} aria-hidden="true" className="hidden sm:block" />
+                  Settings
+                </Link>
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -687,10 +749,10 @@ const Profile = () => {
                   autoComplete="name"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100 text-sm sm:text-base font-bold focus:outline-none focus:border-[#3EB489] focus:ring-4 focus:ring-[#3EB489]/10 transition-all"
+                  className="w-full px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100 text-sm sm:text-base font-bold text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#3EB489] focus:ring-4 focus:ring-[#3EB489]/10 transition-all"
                 />
               </div>
-              <div className="space-y-1.5 sm:space-y-2 opacity-60">
+              <div className="space-y-1.5 sm:space-y-2">
                 <label
                   htmlFor="edit-email"
                   className="text-xs sm:text-sm font-black text-slate-500 uppercase tracking-widest ml-1 block"
@@ -700,19 +762,71 @@ const Profile = () => {
                 <input
                   id="edit-email"
                   type="email"
-                  disabled
+                  autoComplete="email"
                   value={editForm.email}
-                  className="w-full px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 rounded-xl sm:rounded-2xl bg-slate-100 border border-slate-100 text-sm sm:text-base font-bold cursor-not-allowed"
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100 text-sm sm:text-base font-bold text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#3EB489] focus:ring-4 focus:ring-[#3EB489]/10 transition-all"
                 />
                 <p className="text-[10px] sm:text-[11px] font-black text-slate-400 ml-1">
-                  Email changes require support verification.
+                  Changing this sends a confirmation link to the new address. Your current
+                  address keeps working until you open it.
                 </p>
               </div>
+
+              {/* Asked for only when the address is actually changing. The server
+                  requires it then - without it, a stolen session could repoint the
+                  account and take it over through password reset. */}
+              {emailChanging && (
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label
+                    htmlFor="edit-current-password"
+                    className="text-xs sm:text-sm font-black text-slate-500 uppercase tracking-widest ml-1 block"
+                  >
+                    Current Password
+                  </label>
+                  <input
+                    id="edit-current-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={editForm.currentPassword}
+                    onChange={(e) => setEditForm({ ...editForm, currentPassword: e.target.value })}
+                    placeholder="Confirm it's you"
+                    className="w-full px-4 sm:px-5 lg:px-6 py-3 sm:py-3.5 lg:py-4 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100 text-sm sm:text-base font-bold text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#3EB489] focus:ring-4 focus:ring-[#3EB489]/10 transition-all"
+                  />
+                  <p className="text-[10px] sm:text-[11px] font-black text-slate-400 ml-1">
+                    We&apos;ll also let your current address know this was requested.
+                  </p>
+                </div>
+              )}
+
+              {/* The change is parked, not applied - say exactly that. */}
+              {emailPending && (
+                <div className="rounded-xl sm:rounded-2xl border border-[#3EB489]/30 bg-[#3EB489]/5 p-4">
+                  <p className="text-sm font-black text-[#2d9062]">Almost done</p>
+                  <p className="text-xs sm:text-sm font-bold text-slate-600 mt-1 leading-relaxed">
+                    We&apos;ve sent a confirmation link to{' '}
+                    <span className="text-slate-900">{emailPending}</span>. Your email address
+                    changes once you open it - until then you keep signing in with your current
+                    address.
+                  </p>
+                </div>
+              )}
+
+              {editError && (
+                <p role="alert" className="text-xs sm:text-sm font-black text-rose-600 ml-1">
+                  {editError}
+                </p>
+              )}
 
               <div className="pt-2 sm:pt-3 lg:pt-4 flex gap-3 sm:gap-4">
                 <button
                   type="button"
-                  onClick={() => setIsEditModalOpen(false)}
+                  onClick={() => {
+                    setEditForm((prev) => ({ ...prev, currentPassword: '' }));
+                    setEditError('');
+                    setEmailPending('');
+                    setIsEditModalOpen(false);
+                  }}
                   className="flex-1 py-3 sm:py-3.5 lg:py-4 bg-slate-50 text-slate-600 font-black text-sm sm:text-base rounded-xl sm:rounded-2xl hover:bg-slate-100 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
                 >
                   Cancel

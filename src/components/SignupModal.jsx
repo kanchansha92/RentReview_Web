@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, X, Loader2, Home, User } from 'lucide-react';
-import { BASE_URL } from '../constants';
+import { API_BASE_URL, apiFetch, setCsrfToken } from '../config/api';
 import { useDialogA11y } from './LoginModal';
 import {
     motion,
@@ -60,10 +60,9 @@ const SignupModal = ({ onClose, onSuccess, onSwitchToLogin }) => {
 
         setLoading(true);
         try {
-            const res = await fetch(`${BASE_URL}/auth/register`, {
+            const res = await apiFetch('/auth/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+                body: ({
                     name: form.name.trim(),
                     email: form.email.trim(),
                     password: form.password,
@@ -86,7 +85,8 @@ const SignupModal = ({ onClose, onSuccess, onSwitchToLogin }) => {
                 return;
             }
 
-            onSuccess?.(data.user, data.token);
+            setCsrfToken(data.csrfToken);
+            onSuccess?.(data.user);
             onClose();
         } catch {
             setError('Unable to connect to the server. Please try again.');
@@ -317,7 +317,7 @@ const SignupModal = ({ onClose, onSuccess, onSwitchToLogin }) => {
                     <motion.button
                         type="button"
                         variants={fadeUp}
-                        onClick={() => window.location.href = `${BASE_URL}/auth/google`}
+                        onClick={() => window.location.href = `${API_BASE_URL}/auth/google`}
                         aria-label="Continue with Google"
                         whileHover={{ scale: 1.015 }}
                         whileTap={{ scale: 0.98 }}

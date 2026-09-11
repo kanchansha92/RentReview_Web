@@ -1,11 +1,3 @@
-// ── Motion vocabulary ─────────────────────────────────────────────────────
-// One place for every duration, easing curve and variant object used across
-// the site, so motion reads as a single system instead of twenty components
-// each inventing their own timing.
-//
-// House style: short, quiet, and always *toward* the reader — small upward
-// rises and opacity, never bounce or spin. Anything that draws attention to
-// the animation itself rather than the content is out of scope here.
 
 /** Signature easing: fast out of the gate, long soft landing (easeOutQuint). */
 export const EASE = [0.22, 1, 0.36, 1]
@@ -19,14 +11,7 @@ export const DURATION = {
   slow: 0.5,    // hero elements, large section reveals
 }
 
-/**
- * Scroll-reveal defaults shared by <Reveal> and <Stagger>.
- * `amount: 0.2` fires once a fifth of the element is on screen — early enough
- * that the motion is finished before the reader's eye arrives, which is what
- * keeps it from feeling like the page is lagging behind the scroll.
- * `margin` pulls the trigger line up a little so elements that start just
- * below the fold don't animate while already fully visible.
- */
+
 export const VIEWPORT = { once: true, amount: 0.2, margin: '0px 0px -80px 0px' }
 
 // ── Reusable variant objects ──────────────────────────────────────────────

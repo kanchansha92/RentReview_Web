@@ -6,14 +6,15 @@
   --color-brand-green: #41B985;
 }
 
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color-scheme: light;
+  color: #0F172A;
+  background-color: #ffffff;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -34,9 +35,6 @@ body {
   width: 100%;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-}
+/* The light-mode override the starter shipped is gone: it only existed to undo
+   the dark defaults above, and those are no longer there. Re-adding a
+   prefers-color-scheme block would reintroduce exactly the bug it used to mask. */

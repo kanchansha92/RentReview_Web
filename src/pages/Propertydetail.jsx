@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, MapPin, Home, DollarSign, Star, ThumbsUp,
-    Loader2, AlertCircle,
-} from 'lucide-react';
+    Loader2, AlertCircle, Flag } from 'lucide-react';
 import ReviewNavbar from '../components/ReviewNavbar';
 import { getProperty } from '../services/reviewService';
 import { API_BASE_URL } from '../config/api';
@@ -11,6 +10,8 @@ import { serializeJsonLd } from '../utils/jsonLd';
 import useSeo from '../hooks/useSeo';
 import { SITE_URL } from '../config/site';
 import { Stagger, StaggerItem, motion, fadeUp, EASE } from '../animations';
+import ReportReviewModal from '../components/ReportReviewModal';
+import ReviewPhotos, { PhotoCarousel } from '../components/ReviewPhotos';
 
 // Uploaded files are served from the server root (/uploads/...), not /api
 const SERVER_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
@@ -87,6 +88,21 @@ const PropertyDetail = () => {
         star,
         count: reviews.filter((r) => Math.round(r.rating) === star).length,
     }));
+
+    // Hero gallery: the cover image first, then every photo any tenant uploaded
+    // with a review, de-duplicated (the cover is itself a copy of one review's
+    // first photo).
+    const galleryUrls = useMemo(() => {
+        const seen = new Set();
+        const out = [];
+        const push = (p) => {
+            const url = resolveUpload(p);
+            if (url && !seen.has(url)) { seen.add(url); out.push(url); }
+        };
+        if (property?.image) push(property.image);
+        reviews.forEach((r) => (Array.isArray(r.photos) ? r.photos : []).forEach(push));
+        return out;
+    }, [property, reviews]);
 
     // ── JSON-LD: Apartment + AggregateRating + Review schemas ────────────────
     // This is what triggers gold-star ratings in Google search results.
@@ -258,13 +274,11 @@ const PropertyDetail = () => {
                                 transition={{ duration: 0.45, ease: EASE }}
                                 className="relative h-56 sm:h-64 lg:h-auto lg:min-h-[400px] w-full overflow-hidden rounded-2xl bg-slate-100 shadow-sm"
                             >
-                                {property.image ? (
-                                    <img
-                                        src={resolveUpload(property.image)}
-                                        alt={`${property.title} -${property.type || 'property'} in ${property.city || 'India'}`}
-                                        width="800"
-                                        height="600"
-                                        className="h-full w-full object-cover"
+                                {galleryUrls.length > 0 ? (
+                                    <PhotoCarousel
+                                        urls={galleryUrls}
+                                        label={`${property.title} photo`}
+                                        fill
                                     />
                                 ) : (
                                     <div
@@ -475,9 +489,13 @@ const ReviewCard = ({ review }) => {
         setVoted(true);
     };
 
+    const [reporting, setReporting] = useState(false);
+
     const isoDate = (() => {
         try { return new Date(review.createdAt).toISOString(); } catch { return ''; }
     })();
+
+    const ownerResponse = review.ownerResponse?.body ? review.ownerResponse : null;
 
     return (
         <article className="rounded-2xl border border-black/10 bg-white p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -547,26 +565,32 @@ const ReviewCard = ({ review }) => {
                 </div>
             )}
 
-            {/* Photos */}
-            {review.photos?.length > 0 && (
-                <ul className="mt-4 flex flex-wrap gap-2 list-none" aria-label="Review photos">
-                    {review.photos.map((src, i) => (
-                        <li key={i}>
-                            <img
-                                src={resolveUpload(src)}
-                                alt={`${review.title || 'Review'} photo ${i + 1}`}
-                                width="80"
-                                height="80"
-                                loading="lazy"
-                                className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg border border-black/10 object-cover hover:scale-105 transition-transform cursor-pointer"
-                            />
-                        </li>
-                    ))}
-                </ul>
+            {/* Photos -1 or 2 shown inline, 3+ as a carousel (see ReviewPhotos) */}
+            <ReviewPhotos photos={review.photos} title={review.title} className="mt-4" />
+
+            {/* Owner's response, when one has been published.
+                Published by a moderator, never self-serve - nothing here proves
+                someone owns an address, so the wording claims only what is true:
+                a response was submitted by someone identifying as the owner. */}
+            {ownerResponse && (
+                <aside className="mt-4 rounded-xl border border-[#41B985]/30 bg-[#41B985]/5 p-3 sm:p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#008236] mb-1.5">
+                        Response from the property owner
+                    </p>
+                    <p className="text-xs sm:text-sm text-[#364153] whitespace-pre-wrap leading-relaxed">
+                        {ownerResponse.body}
+                    </p>
+                    {ownerResponse.publishedAt && (
+                        <p className="mt-2 text-[10px] sm:text-xs text-[#6A7282]">
+                            Submitted to RentReview and published after review on{' '}
+                            {formatMonthYear(ownerResponse.publishedAt)}
+                        </p>
+                    )}
+                </aside>
             )}
 
-            {/* Helpful */}
-            <div className="mt-4 border-t border-black/10 pt-3">
+            {/* Helpful + report */}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-black/10 pt-3">
                 <button
                     type="button"
                     onClick={vote}
@@ -580,7 +604,21 @@ const ReviewCard = ({ review }) => {
                 >
                     <ThumbsUp className="h-4 w-4" aria-hidden="true" /> Helpful ({helpful})
                 </button>
+
+                {/* Quiet by design: this is a route for the person being written
+                    about, not a call to action for every reader. */}
+                <button
+                    type="button"
+                    onClick={() => setReporting(true)}
+                    className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#6A7282] hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                >
+                    <Flag className="h-3.5 w-3.5" aria-hidden="true" /> Report
+                </button>
             </div>
+
+            {reporting && (
+                <ReportReviewModal review={review} onClose={() => setReporting(false)} />
+            )}
         </article>
     );
 };

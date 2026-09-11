@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, X, Home, Loader2 } from 'lucide-react';
-import { BASE_URL } from '../constants';
+import { API_BASE_URL, apiFetch, setCsrfToken } from '../config/api';
 import { loginSuccess } from '../store/authSlice';
 import ForgotPasswordModal from '../components/ForgotPasswordModal';
 import useSeo from '../hooks/useSeo';
@@ -76,10 +76,9 @@ const SignIn = () => {
 
         setLoading(true);
         try {
-            const res = await fetch(`${BASE_URL}/auth/login`, {
+            const res = await apiFetch('/auth/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: form.email.trim(), password: form.password }),
+                body: { email: form.email.trim(), password: form.password },
             });
            
             const data = await res.json().catch(() => ({}));
@@ -95,7 +94,8 @@ const SignIn = () => {
                 return;
             }
 
-            dispatch(loginSuccess({ token: data.token, user: data.user }));
+            setCsrfToken(data.csrfToken);
+            dispatch(loginSuccess({ user: data.user }));
             navigate('/');
         } catch {
             setError('Unable to connect to the server. Please try again.');
@@ -105,11 +105,11 @@ const SignIn = () => {
     };
 
     const handleGoogleLogin = () => {
-        window.location.href = `${BASE_URL}/auth/google`;
+        window.location.href = `${API_BASE_URL}/auth/google`;
     };
 
     const handleFacebookLogin = () => {
-        window.location.href = `${BASE_URL}/auth/facebook`;
+        window.location.href = `${API_BASE_URL}/auth/facebook`;
     };
 
     return (

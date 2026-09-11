@@ -12,7 +12,7 @@ import {
     fadeUp,
     EASE,
 } from '../animations';
-import { BASE_URL } from '../constants';
+import { API_BASE_URL, apiFetch, setCsrfToken } from '../config/api';
 import { loginSuccess } from '../store/authSlice';
 import ForgotPasswordModal from './ForgotPasswordModal';
 
@@ -114,10 +114,9 @@ const LoginModal = ({ onClose, onSuccess, onSwitchToSignup }) => {
 
         setLoading(true);
         try {
-            const res = await fetch(`${BASE_URL}/auth/login`, {
+            const res = await apiFetch('/auth/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: form.email.trim(), password: form.password }),
+                body: { email: form.email.trim(), password: form.password },
             });
           
             const data = await res.json().catch(() => ({}));
@@ -133,8 +132,11 @@ const LoginModal = ({ onClose, onSuccess, onSwitchToSignup }) => {
                 return;
             }
 
-            dispatch(loginSuccess({ token: data.token, user: data.user }));
-            onSuccess?.(data.user, data.token);
+            // The session arrived as an HttpOnly cookie; only the user object
+            // is ours to hold.
+            setCsrfToken(data.csrfToken);
+            dispatch(loginSuccess({ user: data.user }));
+            onSuccess?.(data.user);
             onClose();
         } catch {
             setError('Unable to connect to the server. Please try again.');
@@ -324,7 +326,7 @@ const LoginModal = ({ onClose, onSuccess, onSwitchToSignup }) => {
                     <motion.button
                         type="button"
                         variants={fadeUp}
-                        onClick={() => window.location.href = `${BASE_URL}/auth/google`}
+                        onClick={() => window.location.href = `${API_BASE_URL}/auth/google`}
                         aria-label="Continue with Google"
                         whileHover={{ scale: 1.015 }}
                         whileTap={{ scale: 0.98 }}

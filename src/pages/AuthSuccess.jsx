@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { Loader2 } from 'lucide-react';
 import { motion } from '../animations';
-import { API_BASE_URL, STORAGE_KEYS } from '../config/api';
+import { apiFetch, setCsrfToken, STORAGE_KEYS } from '../config/api';
 import { loginSuccess } from '../store/authSlice';
 import useSeo from '../hooks/useSeo';
 
@@ -11,7 +11,6 @@ import useSeo from '../hooks/useSeo';
 
 const clearStoredAuth = () => {
     try {
-        localStorage.removeItem(STORAGE_KEYS.TOKEN);
         localStorage.removeItem(STORAGE_KEYS.USER);
     } catch {
         // storage unavailable -nothing to clear
@@ -28,7 +27,6 @@ const AuthSuccess = () => {
     const dispatch = useDispatch();
 
     const code = searchParams.get('code');
-    const legacyToken = searchParams.get('token');
 
     // The code is single-use: StrictMode's double mount would consume it on the
     // first run and fail the second. This ref makes the exchange fire once.
@@ -44,9 +42,10 @@ const AuthSuccess = () => {
             navigate('/signin?error=oauth', { replace: true });
         };
 
-        const succeed = (token, user) => {
-            // Let the store own persistence (store.js subscriber writes both keys).
-            dispatch(loginSuccess({ token, user }));
+        const succeed = (user) => {
+            // The exchange response set the session cookie; the store only
+            // needs the user object for rendering.
+            dispatch(loginSuccess({ user }));
             navigate('/', { replace: true });
         };
 
@@ -54,10 +53,9 @@ const AuthSuccess = () => {
         const exchangeCode = async () => {
             let res;
             try {
-                res = await fetch(`${API_BASE_URL}/auth/exchange`, {
+                res = await apiFetch('/auth/exchange', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code }),
+                    body: { code },
                 });
             } catch (err) {
                 return fail(err);
@@ -66,37 +64,20 @@ const AuthSuccess = () => {
             // An HTML 502 from a cold start must not throw here.
             const data = await res.json().catch(() => ({}));
 
-            if (!res.ok || !data.success || !data.token || !data.user) {
+            if (!res.ok || !data.success || !data.user) {
                 return fail(data.message || `exchange returned ${res.status}`);
             }
 
-            succeed(data.token, data.user);
+            setCsrfToken(data.csrfToken);
+            succeed(data.user);
         };
 
-        // ── Legacy path: a JWT still in the query string ─────────────────────
-        const useLegacyToken = async () => {
-            let res;
-            try {
-                res = await fetch(`${API_BASE_URL}/auth/me`, {
-                    headers: { Authorization: `Bearer ${legacyToken}` },
-                });
-            } catch (err) {
-                return fail(err);
-            }
-
-            const data = await res.json().catch(() => ({}));
-
-            if (!res.ok || !data.user) {
-                return fail(data.message || `/auth/me returned ${res.status}`);
-            }
-
-            succeed(legacyToken, data.user);
-        };
-
+        // The legacy `?token=` path is gone: nothing produces it any more, and
+        // a JWT in a URL is exactly what the cookie migration removes it
+        // lands in browser history, Referer headers and server logs.
         if (code) exchangeCode();
-        else if (legacyToken) useLegacyToken();
-        else fail('no code or token in the callback URL');
-    }, [code, legacyToken, navigate, dispatch]);
+        else fail('no code in the callback URL');
+    }, [code, navigate, dispatch]);
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-[#F9FAFB]">

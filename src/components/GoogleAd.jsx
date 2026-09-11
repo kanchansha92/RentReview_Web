@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { getConsent, onConsentChange } from './CookieConsent';
 
 // The publisher id comes from the environment -no placeholder ships to prod.
 // With VITE_ADSENSE_CLIENT unset the component renders nothing at all.
@@ -13,10 +14,17 @@ const GoogleAd = ({ client = ENV_CLIENT, slot = ENV_SLOT, format = 'auto', respo
   // every effect twice -so push at most once per mounted element.
   const pushedRef = useRef(false);
 
+  // AdSense sets tracking cookies the moment its script loads, so the script
+  // must not be injected until someone has actually said yes. Undecided counts
+  // as "no" consent has to be given, not assumed.
+  const [consent, setConsentState] = useState(() => getConsent());
+  useEffect(() => onConsentChange(setConsentState), []);
+
   const configured = !isPlaceholder(client) && !isPlaceholder(slot);
+  const allowed = configured && consent === 'granted';
 
   useEffect(() => {
-    if (!configured) return;
+    if (!allowed) return;
 
     // Load the adsbygoogle script if it's not already there
     const scriptId = 'google-adsense-script';
@@ -39,10 +47,11 @@ const GoogleAd = ({ client = ENV_CLIENT, slot = ENV_SLOT, format = 'auto', respo
     } catch (e) {
       console.error('Google Ads error:', e);
     }
-  }, [client, configured]);
+  }, [client, allowed]);
 
-  // Not fully configured -render nothing rather than an empty ad frame.
-  if (!configured) return null;
+  // Not configured, or consent not given -render nothing at all. An empty ad
+  // frame would reserve space for something that is never going to load.
+  if (!allowed) return null;
 
   return (
     <div className="w-full flex justify-center my-6 overflow-hidden bg-gray-50 rounded shadow-sm border border-gray-100 p-2">

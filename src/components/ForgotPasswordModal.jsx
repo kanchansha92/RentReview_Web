@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mail, X, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
-import { BASE_URL } from '../constants';
+import { apiFetch } from '../config/api';
 import { useDialogA11y } from './LoginModal';
 import {
     motion,
@@ -41,10 +41,9 @@ const ForgotPasswordModal = ({ onClose, onBackToLogin }) => {
 
         setLoading(true);
         try {
-            const res = await fetch(`${BASE_URL}/auth/forgot-password`, {
+            const res = await apiFetch('/auth/forgot-password', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email.trim() }),
+                body: { email: email.trim() },
             });
           
             const data = await res.json().catch(() => ({}));

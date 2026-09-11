@@ -85,7 +85,7 @@ export default function useSeo({
         cleanups.push(upsert('meta[name="twitter:image"]', 'meta', { name: 'twitter:image', content: ogImage }));
 
         // Cleanups run in reverse so the outermost (title) restores last,
-        // though order doesn't actually matter here — each tag is independent.
+        // though order doesn't actually matter here each tag is independent.
         return () => { cleanups.forEach((fn) => fn()); };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [title, description, path, image, type, noindex, robots]);

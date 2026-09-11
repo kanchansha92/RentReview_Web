@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import Footer from '../components/Footer';
@@ -7,6 +7,7 @@ import { deleteReview } from '../services/reviewService';
 import {
   fetchMyReviews,
   removeMyReview,
+  updateMyReview,
   selectMyReviews,
   selectMyReviewsStatus,
   selectMyReviewsError,
@@ -16,6 +17,7 @@ import {
   MapPin,
   MessageSquare,
   Trash2,
+  Pencil,
   ChevronRight,
   Home,
   ArrowLeft,
@@ -23,8 +25,12 @@ import {
   Sparkles,
   AlertTriangle,
   RefreshCw,
+  EyeOff,
 } from 'lucide-react';
 import ReviewNavbar from '../components/ReviewNavbar';
+import ReviewPhotos from '../components/ReviewPhotos';
+import EditReviewModal from '../components/EditReviewModal';
+import ConfirmDialog from '../components/ConfirmDialog';
 import useSeo from '../hooks/useSeo';
 import { Reveal, Stagger, StaggerItem, fadeUp } from '../animations';
 
@@ -67,15 +73,38 @@ const MyReviews = () => {
     dispatch(fetchMyReviews());
   };
 
-  const handleDeleteReview = async (id) => {
-    if (window.confirm('Are you sure you want to delete this review?')) {
-      try {
-        await deleteReview(id);
-        dispatch(removeMyReview(id));
-      } catch (error) {
-        alert('Failed to delete review: ' + error.message);
-      }
+  // Whole review objects, not ids: both dialogs show what they are acting on,
+  // and the edit form needs the current values to open with.
+  const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const closeDelete = () => {
+    setDeleting(null);
+    setDeleteError('');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    setDeleteError('');
+    try {
+      await deleteReview(deleting._id);
+      dispatch(removeMyReview(deleting._id));
+      setDeleting(null);
+    } catch (error) {
+      // Kept open on failure. The review is still there, so closing the dialog
+      // would leave the user believing a delete happened that didn't.
+      setDeleteError(error.message || 'We could not delete your review. Please try again.');
+    } finally {
+      setDeleteBusy(false);
     }
+  };
+
+  const handleSaved = (updated) => {
+    dispatch(updateMyReview(updated));
+    setEditing(null);
   };
 
   if (loadingStatus === 'loading' || loadingStatus === 'idle') {
@@ -290,8 +319,37 @@ const MyReviews = () => {
                                     })}
                                   </time>
                                 )}
+                                {/* Reviews are public claims about a named landlord.
+                                    When one has been rewritten since it was posted,
+                                    say so to the author here, at least. The one
+                                    second of slack absorbs the sub-second gap
+                                    Mongoose leaves between createdAt and updatedAt
+                                    on insert, which would otherwise mark every
+                                    review as edited. */}
+                                {rev.updatedAt &&
+                                  new Date(rev.updatedAt) - new Date(rev.createdAt) > 1000 && (
+                                    <span className="text-[10px] font-black text-[#CBD5E1] uppercase tracking-widest whitespace-nowrap mt-0.5">
+                                      Edited
+                                    </span>
+                                  )}
                               </div>
                             </div>
+
+                            {/* A review taken down after a complaint stays here,
+                                marked. Letting it silently vanish from the site
+                                while still showing in "my reviews" is the worst
+                                of both: the author cannot tell anything happened,
+                                and cannot ask why. */}
+                            {rev.moderation?.status === 'hidden' && (
+                              <p className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-800">
+                                <EyeOff size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+                                <span>
+                                  This review is hidden from public view following a report.
+                                  It is not shown on the property page and does not count towards its rating.{' '}
+                                  <Link to="/contact" className="underline">Contact us</Link> if you think that is wrong.
+                                </span>
+                              </p>
+                            )}
 
                             <h3 className="text-base sm:text-lg lg:text-xl font-black text-[#0F172A] mb-2 sm:mb-3 lg:mb-4 leading-tight">
                               {rev.title}
@@ -299,6 +357,15 @@ const MyReviews = () => {
                             <p className="text-[#475569] font-medium leading-relaxed mb-6 sm:mb-8 lg:mb-10 text-sm sm:text-[15px] whitespace-pre-line">
                               {rev.body}
                             </p>
+
+                            {/* Photos the author attached -same treatment as
+                                the public property page so they see exactly
+                                what visitors see. Renders nothing when empty. */}
+                            <ReviewPhotos
+                              photos={rev.photos}
+                              title={rev.title}
+                              className="-mt-3 sm:-mt-5 lg:-mt-7 mb-6 sm:mb-8 lg:mb-10"
+                            />
 
                             <div className="flex items-center justify-between gap-3 pt-4 sm:pt-6 lg:pt-8 border-t border-slate-50">
                               {rev.property?._id ? (
@@ -321,15 +388,26 @@ const MyReviews = () => {
                               ) : (
                                 <span />
                               )}
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteReview(rev._id)}
-                                aria-label={`Delete review of ${rev.property?.title || 'this property'}`}
-                                className="p-2.5 sm:p-3 bg-rose-50 text-rose-400 hover:text-rose-600 hover:bg-rose-100 rounded-xl sm:rounded-2xl transition-all shadow-sm shrink-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
-                              >
-                                <Trash2 size={16} aria-hidden="true" className="sm:hidden" />
-                                <Trash2 size={18} aria-hidden="true" className="hidden sm:block" />
-                              </button>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditing(rev)}
+                                  aria-label={`Edit your review of ${rev.property?.title || 'this property'}`}
+                                  className="p-2.5 sm:p-3 bg-emerald-50 text-[#3EB489] hover:text-white hover:bg-[#3EB489] rounded-xl sm:rounded-2xl transition-all shadow-sm cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3EB489] focus-visible:ring-offset-2"
+                                >
+                                  <Pencil size={16} aria-hidden="true" className="sm:hidden" />
+                                  <Pencil size={18} aria-hidden="true" className="hidden sm:block" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleting(rev)}
+                                  aria-label={`Delete your review of ${rev.property?.title || 'this property'}`}
+                                  className="p-2.5 sm:p-3 bg-rose-50 text-rose-400 hover:text-rose-600 hover:bg-rose-100 rounded-xl sm:rounded-2xl transition-all shadow-sm cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
+                                >
+                                  <Trash2 size={16} aria-hidden="true" className="sm:hidden" />
+                                  <Trash2 size={18} aria-hidden="true" className="hidden sm:block" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -398,6 +476,40 @@ const MyReviews = () => {
       </main>
 
       <Footer />
+
+      {/* Keyed on the review id so switching between two cards remounts the
+          form with the right values instead of keeping the first one's state. */}
+      {editing && (
+        <EditReviewModal
+          key={editing._id}
+          review={editing}
+          onClose={() => setEditing(null)}
+          onSaved={handleSaved}
+        />
+      )}
+
+      {deleting && (
+        <ConfirmDialog
+          title="Delete this review?"
+          message={
+            <>
+              Your review of{' '}
+              <strong className="font-bold text-[#0A0A0A]">
+                {deleting.property?.title || 'this property'}
+              </strong>{' '}
+              will be permanently removed, along with any photos you attached and the
+              ID document you uploaded with it. The property&apos;s rating is recalculated
+              without it. This can&apos;t be undone.
+            </>
+          }
+          confirmLabel="Delete review"
+          busyLabel="Deleting…"
+          busy={deleteBusy}
+          error={deleteError}
+          onConfirm={handleConfirmDelete}
+          onClose={closeDelete}
+        />
+      )}
     </div>
   );
 };

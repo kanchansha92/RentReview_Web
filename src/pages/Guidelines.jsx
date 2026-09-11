@@ -1,262 +1,272 @@
-import React, { useMemo } from 'react';
+
+import React from 'react';
 import { Link } from 'react-router-dom';
-import Footer from '../components/Footer';
-import { Shield, ShieldAlert, CheckCircle2, CircleX, Info, Heart } from 'lucide-react';
-import ReviewNavbar from '../components/ReviewNavbar';
-import useSeo from '../hooks/useSeo';
-import { SITE_URL } from '../config/site';
-import { serializeJsonLd } from '../utils/jsonLd';
-import { Reveal, motion } from '../animations';
+import { Check, X } from 'lucide-react';
+import LegalPage, { Section, List, Facts, Note } from '../components/legal/LegalPage';
+import { GRIEVANCE_OFFICER } from '../config/legal';
+
+const SECTIONS = [
+    { id: 'short-version', title: 'The short version' },
+    { id: 'good-review', title: 'What makes a good review' },
+    { id: 'not-allowed', title: 'What is not allowed' },
+    { id: 'examples', title: 'Two examples' },
+    { id: 'photos', title: 'Photos' },
+    { id: 'moderation', title: 'How moderation works' },
+    { id: 'reporting', title: 'Reporting a review' },
+    { id: 'enforcement', title: 'If you break the rules' },
+];
 
 const DOS = [
-  'Share personal, first-hand experiences',
-  'Be specific about property conditions and management',
-  'Provide constructive feedback',
-  'Include both pros and cons where applicable',
-  'Keep reviews honest and objective',
+    'Write about a place you actually rented, lived in, or genuinely viewed.',
+    'Be specific: the condition of the flat, how repairs were handled, how quickly the deposit came back.',
+    'Say how long you stayed and roughly when. A problem from five years ago may well be fixed.',
+    'Include what was good as well as what was not. Nobody trusts a review with only one side.',
+    'Separate fact from opinion. "The lift was out for three weeks" is a fact; "the worst building in the city" is an opinion, and that is fine as long as it reads like one.',
 ];
 
 const DONTS = [
-  'Use hate speech, harassment, or threats',
-  'Post personal information of landlords or staff',
-  'Use profanity or offensive language',
-  'Post spam, promotional content, or fake reviews',
-  'Discuss legal proceedings without context',
+    'Hate speech, harassment, threats, or abuse of any kind.',
+    "Anyone's personal details: phone numbers, email addresses, workplaces, ID numbers, or a flat number that identifies a person.",
+    'Reviews written for someone else, paid for, or posted to settle a score.',
+    'Promotion of any kind: listings, agent contact details, or services.',
+    'Accusations of a crime stated as fact, or details of an ongoing legal case.',
 ];
 
-const Guidelines = () => {
-  useSeo({
-    title: 'Community Guidelines | RentReview',
-    description:
-      "Read RentReview's community guidelines for posting helpful, honest rental reviews. Learn what's encouraged, what's not allowed, and how moderation works.",
-    path: '/guidelines',
-  });
-
-  // ── JSON-LD structured data ─────────────────────────────────────────────
-  const pageSchema = useMemo(
-    () => ({
-      '@context': 'https://schema.org',
-      '@type': 'WebPage',
-      name: 'Community Guidelines',
-      url: `${SITE_URL}/guidelines`,
-      description:
-        "RentReview's community guidelines defining acceptable content, moderation policy, and enforcement actions.",
-      inLanguage: 'en',
-      isPartOf: {
-        '@type': 'WebSite',
-        name: 'RentReview',
-        url: SITE_URL,
-      },
-    }),
-    []
-  );
-
-  const breadcrumbSchema = useMemo(
-    () => ({
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
-        { '@type': 'ListItem', position: 2, name: 'Community Guidelines', item: `${SITE_URL}/guidelines` },
-      ],
-    }),
-    []
-  );
-
-  return (
-    <div className="min-h-screen bg-white font-sans text-slate-900 flex flex-col">
-      <ReviewNavbar />
-
-      <main className="flex-1 py-10 px-4 sm:py-14 sm:px-6 lg:py-20 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-
-          {/* Breadcrumb */}
-          <nav aria-label="Breadcrumb" className="mb-4 sm:mb-6">
-            <ol className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm text-slate-500 list-none">
-              <li>
-                <Link to="/" className="hover:text-[#41B985] transition-colors">Home</Link>
-              </li>
-              <li aria-hidden="true" className="text-slate-300">/</li>
-              <li>
-                <span className="text-slate-700 font-medium">Community Guidelines</span>
-              </li>
-            </ol>
-          </nav>
-
-          {/* Header */}
-          <Reveal as="header" className="text-center mb-10 sm:mb-12 lg:mb-16">
-            <div className="inline-flex items-center gap-2 mb-4 sm:mb-5">
-              {/* The brand rule draws itself out from the left. */}
-              <motion.div
-                aria-hidden="true"
-                className="h-1 w-8 origin-left rounded-full bg-[#41B985]"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
-              />
-              <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] text-[#41B985] uppercase">
-                Community
-              </span>
-            </div>
-
-            <div
-              aria-hidden="true"
-              className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-2xl bg-[#41B985]/10 mb-5 sm:mb-6"
+// ── A rules card ─────────────────────────────────────────────────────────────
+// One card per section rather than two side by side: the column is narrow, and
+// a list of full sentences reads badly at half width.
+const Rules = ({ tone, title, items }) => {
+    const good = tone === 'good';
+    const Icon = good ? Check : X;
+    return (
+        <div
+            className={`overflow-hidden rounded-2xl border ${
+                good
+                    ? 'border-[#41B985]/25 bg-[#41B985]/[0.05]'
+                    : 'border-rose-200/70 bg-rose-50/50'
+            }`}
+        >
+            <p
+                className={`px-5 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] sm:px-6 ${
+                    good ? 'text-[#2f8a62]' : 'text-rose-700'
+                }`}
             >
-              <Shield className="text-[#41B985] w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8" />
-            </div>
-
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-3 sm:mb-4 tracking-tight">
-              Community Guidelines
-            </h1>
-            <p className="text-sm sm:text-base lg:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed px-2">
-              Our guidelines ensure that RentReview remains a helpful, safe, and trustworthy community for all renters.
+                {title}
             </p>
-          </Reveal>
-
-          {/* Guidelines article */}
-          <article>
-            {/* ── Core Philosophy ─────────────────────────────────────────── */}
-            <Reveal as="section"
-              aria-labelledby="philosophy-heading"
-              className="bg-slate-900 text-white p-6 sm:p-8 lg:p-12 rounded-2xl sm:rounded-3xl mb-10 sm:mb-12 lg:mb-16 relative overflow-hidden"
-            >
-              <Heart
-                aria-hidden="true"
-                className="absolute -right-6 -bottom-6 sm:-right-8 sm:-bottom-8 text-white/5 w-32 h-32 sm:w-44 sm:h-44 lg:w-52 lg:h-52 pointer-events-none"
-              />
-              <h2
-                id="philosophy-heading"
-                className="text-lg sm:text-xl lg:text-2xl font-bold mb-3 sm:mb-4 relative z-10 flex items-center gap-2 sm:gap-3"
-              >
-                <Info className="text-[#41B985] w-5 h-5 sm:w-6 sm:h-6 shrink-0" aria-hidden="true" />
-                Our Core Philosophy
-              </h2>
-              <p className="text-slate-300 text-sm sm:text-base lg:text-lg leading-relaxed relative z-10">
-                We believe in the power of transparency to improve the rental industry. Our platform is built on
-                trust, honesty, and mutual respect. We expect all members to contribute in a way that is helpful
-                to others while maintaining a standard of decorum.
-              </p>
-            </Reveal>
-
-            {/* ── Dos and Don'ts ──────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-10 sm:mb-12 lg:mb-16">
-              {/* Dos */}
-              <Reveal as="section"
-                aria-labelledby="dos-heading"
-                className="bg-emerald-50/50 p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl border border-emerald-100"
-              >
-                <h2
-                  id="dos-heading"
-                  className="text-base sm:text-lg lg:text-xl font-bold text-emerald-900 mb-4 sm:mb-5 lg:mb-6 flex items-center gap-2 sm:gap-3"
-                >
-                  <CheckCircle2 className="text-emerald-500 w-5 h-5 sm:w-6 sm:h-6 shrink-0" aria-hidden="true" />
-                  Community Dos
-                </h2>
-                <ul className="space-y-3 sm:space-y-4 list-none">
-                  {DOS.map((item, index) => (
-                    <li key={index} className="flex gap-2.5 sm:gap-3 items-start text-emerald-800">
-                      <span
-                        aria-hidden="true"
-                        className="shrink-0 w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 sm:mt-2"
-                      />
-                      <span className="text-sm sm:text-base font-medium leading-relaxed">{item}</span>
+            <ul className="space-y-3 px-5 py-4 list-none sm:px-6 sm:py-5">
+                {items.map((item, i) => (
+                    <li key={i} className="flex gap-3">
+                        <span
+                            aria-hidden="true"
+                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+                                good
+                                    ? 'bg-[#41B985]/15 text-[#2f8a62]'
+                                    : 'bg-rose-500/12 text-rose-600'
+                            }`}
+                        >
+                            <Icon className="h-3 w-3" strokeWidth={3} />
+                        </span>
+                        <span className="min-w-0 flex-1 text-slate-700">{item}</span>
                     </li>
-                  ))}
-                </ul>
-              </Reveal>
-
-              {/* Don'ts */}
-              <Reveal as="section"
-                aria-labelledby="donts-heading"
-                className="bg-red-50/50 p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl border border-red-100"
-              >
-                <h2
-                  id="donts-heading"
-                  className="text-base sm:text-lg lg:text-xl font-bold text-red-900 mb-4 sm:mb-5 lg:mb-6 flex items-center gap-2 sm:gap-3"
-                >
-                  <CircleX className="text-red-500 w-5 h-5 sm:w-6 sm:h-6 shrink-0" aria-hidden="true" />
-                  Community Don'ts
-                </h2>
-                <ul className="space-y-3 sm:space-y-4 list-none">
-                  {DONTS.map((item, index) => (
-                    <li key={index} className="flex gap-2.5 sm:gap-3 items-start text-red-800">
-                      <span
-                        aria-hidden="true"
-                        className="shrink-0 w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 sm:mt-2"
-                      />
-                      <span className="text-sm sm:text-base font-medium leading-relaxed">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Reveal>
-            </div>
-
-            {/* ── Moderation Policy ───────────────────────────────────────── */}
-            <Reveal as="section"
-              aria-labelledby="moderation-heading"
-              className="p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl border border-slate-100 bg-slate-50"
-            >
-              <h2
-                id="moderation-heading"
-                className="text-lg sm:text-xl lg:text-2xl font-bold mb-4 sm:mb-5 lg:mb-6 flex items-center gap-2 sm:gap-3"
-              >
-                <ShieldAlert className="text-orange-500 w-5 h-5 sm:w-6 sm:h-6 shrink-0" aria-hidden="true" />
-                Moderation Policy
-              </h2>
-              <div className="text-slate-600 space-y-3 sm:space-y-4 text-sm sm:text-base leading-relaxed">
-                <p>
-                  To maintain the integrity of our platform, we use a combination of automated systems and manual
-                  review to moderate content. Reviews that violate our guidelines may be removed without notice.
-                </p>
-                <p>
-                  If you encounter a review that you believe violates these guidelines, please use the "Report"
-                  button located on the review card. Our moderation team will investigate and take appropriate
-                  action.
-                </p>
-              </div>
-            </Reveal>
-
-            {/* ── Enforcement note ────────────────────────────────────────── */}
-            <aside
-              role="note"
-              className="mt-10 sm:mt-12 lg:mt-16 text-center text-slate-500 text-xs sm:text-sm leading-relaxed"
-            >
-              <p>
-                Failure to follow these guidelines may result in content removal, account suspension, or a
-                permanent ban from the platform. We reserve the right to interpret and enforce these guidelines
-                at our sole discretion.
-              </p>
-            </aside>
-
-            {/* Related links */}
-            <p className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-slate-600">
-              See also:{' '}
-              <Link to="/terms" className="text-[#41B985] font-medium hover:underline">
-                Terms of Service
-              </Link>{' '}
-              ·{' '}
-              <Link to="/privacy" className="text-[#41B985] font-medium hover:underline">
-                Privacy Policy
-              </Link>
-            </p>
-          </article>
-
-          {/* JSON-LD structured data */}
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: serializeJsonLd(pageSchema) }}
-          />
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbSchema) }}
-          />
+                ))}
+            </ul>
         </div>
-      </main>
-
-      <Footer />
-    </div>
-  );
+    );
 };
+
+// ── A worked example ─────────────────────────────────────────────────────────
+const Example = ({ verdict, tone, quote, why }) => {
+    const good = tone === 'good';
+    return (
+        <figure className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <figcaption
+                className={`flex items-center gap-2 border-b px-5 py-2.5 text-[13px] font-semibold sm:px-6 ${
+                    good
+                        ? 'border-[#41B985]/20 bg-[#41B985]/[0.06] text-[#2f8a62]'
+                        : 'border-rose-200/70 bg-rose-50/60 text-rose-700'
+                }`}
+            >
+                <span
+                    aria-hidden="true"
+                    className={`flex h-4 w-4 items-center justify-center rounded-full ${
+                        good ? 'bg-[#41B985]/20' : 'bg-rose-500/15'
+                    }`}
+                >
+                    {good ? (
+                        <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                    ) : (
+                        <X className="h-2.5 w-2.5" strokeWidth={3} />
+                    )}
+                </span>
+                {verdict}
+            </figcaption>
+            <blockquote className="px-5 py-4 text-[15px] italic leading-7 text-slate-600 sm:px-6">
+                {quote}
+            </blockquote>
+            <p className="border-t border-slate-100 bg-slate-50/60 px-5 py-3 text-[14px] leading-6 text-slate-600 sm:px-6">
+                {why}
+            </p>
+        </figure>
+    );
+};
+
+const Guidelines = () => (
+    <LegalPage
+        title="Community Guidelines"
+        path="/guidelines"
+        eyebrow="Community"
+        seoDescription="How to write a rental review that actually helps someone: what belongs in a review, what gets one taken down, how moderation works, and what happens if you break the rules."
+        intro="RentReview is only worth reading if the reviews on it are honest, first-hand and specific. These are the rules that keep them that way, with examples of a review that stays up and one that does not."
+        sections={SECTIONS}
+    >
+        <Section id="short-version" title="The short version">
+            <div className="rounded-2xl border border-[#41B985]/20 bg-[#41B985]/[0.05] p-5 sm:p-6">
+                <List
+                    items={[
+                        <>Write only about places you have <strong>actually rented or viewed</strong>.</>,
+                        <>Say what happened, <strong>not what you heard</strong>. Detail is what makes a review useful.</>,
+                        <>Criticise the <strong>property and the service</strong>, not the person.</>,
+                        <>Never post <strong>anyone's personal details</strong>, including your own.</>,
+                        <>Reviews are <strong>public and indexed by search engines</strong>. Write as though the landlord will read it, because they will.</>,
+                    ]}
+                />
+            </div>
+        </Section>
+
+        <Section id="good-review" title="What makes a good review">
+            <p>
+                The reviews people thank us for are rarely the angriest ones. They are the
+                specific ones: a date, a number, a repair that took three weeks instead of
+                "bad maintenance".
+            </p>
+            <Rules tone="good" title="Do" items={DOS} />
+            <p>
+                If you are not sure whether something belongs in a review, ask whether it would
+                have helped <em>you</em> before you signed the agreement. If it would, write it
+                down.
+            </p>
+        </Section>
+
+        <Section id="not-allowed" title="What is not allowed">
+            <Rules tone="bad" title="Do not" items={DONTS} />
+            <p>
+                These are the same rules set out in the{' '}
+                <Link to="/terms">Terms of Service</Link>. The difference here is only that this
+                page shows you what they look like in practice.
+            </p>
+        </Section>
+
+        <Section id="examples" title="Two examples">
+            <p>
+                Both of these are about a flat with a real problem. Only one of them stays up.
+            </p>
+
+            <Example
+                tone="good"
+                verdict="Stays up"
+                quote={
+                    <>
+                        "Lived here 14 months, moved out in March. The 2BHK matched the photos and
+                        the caretaker fixed a leaking geyser within a week. Water supply cut out
+                        most afternoons through the summer, though, and the deposit took two
+                        months and several reminders to come back. Good value for the location if
+                        you can plan around the water."
+                    </>
+                }
+                why="First-hand, dated, specific, and it says what was good as well as what was not. A reader can act on every sentence."
+            />
+
+            <Example
+                tone="bad"
+                verdict="Removed"
+                quote={
+                    <>
+                        "Total scam. The owner is a fraud, call him on 98xxx xxxxx and see for
+                        yourself. A neighbour told me he does this to everyone. Do not rent here."
+                    </>
+                }
+                why="Second-hand, publishes a phone number, and accuses a named person of a crime as though it were established fact. It also tells a reader nothing they can use."
+            />
+
+            <Note>
+                <p>
+                    The second review is not removed for being negative. Strongly negative
+                    reviews are welcome and we do not edit them. It is removed for being about a
+                    person rather than a property, and for repeating something the writer did not
+                    see.
+                </p>
+            </Note>
+        </Section>
+
+        <Section id="photos" title="Photos">
+            <Facts
+                rows={[
+                    ['Only your own', 'Upload pictures you took yourself. Listing photos and images from elsewhere on the internet are not yours to post.'],
+                    ['No people', 'Do not upload photos showing anyone who has not agreed to appear, including neighbours, staff and children.'],
+                    ['No documents', 'Agreements, receipts and IDs often carry names, signatures and numbers. Describe them instead of photographing them.'],
+                    ['Location is stripped', 'We remove location data from every photo before it is stored, so an image does not quietly publish an address.'],
+                ]}
+            />
+        </Section>
+
+        <Section id="moderation" title="How moderation works">
+            <p>
+                Every review passes through automated checks before it appears. Those checks
+                block the things that cannot be undone once they are indexed: phone numbers,
+                email addresses and long ID numbers, including your own.
+            </p>
+            <p>
+                Beyond that, a person decides. We check that a real person stands behind each
+                review, not that every statement in it is correct. We are not able to judge
+                whether your geyser was fixed in a week, and we do not pretend to.
+            </p>
+            <Note>
+                <p>
+                    Nobody can pay to have a review removed, hidden or reworded, and advertisers
+                    have no say in moderation decisions.
+                </p>
+            </Note>
+        </Section>
+
+        <Section id="reporting" title="Reporting a review">
+            <p>
+                If a review breaks these guidelines, use the <strong>Report</strong> button
+                underneath it. It reaches a person, and it is far quicker than a legal letter.
+            </p>
+            <Facts
+                rows={[
+                    ['Say which rule it breaks', 'A report that points at a specific line is dealt with quickly. "I disagree with this" is not something we can act on.'],
+                    ['How fast', `${GRIEVANCE_OFFICER.acknowledgeHours} hours to acknowledge your report, ${GRIEVANCE_OFFICER.resolveDays} days to resolve it.`],
+                    ['If we agree', 'The review is hidden rather than deleted. It disappears from the site, the writer still sees it in My Reviews, and it can be put back.'],
+                    ['If we do not', 'The review stays up and we tell you why.'],
+                ]}
+            />
+            <p>
+                Either side can appeal a decision. The full process, including how to escalate if
+                you disagree with us, is on the <Link to="/grievance">Complaints page</Link>.
+            </p>
+        </Section>
+
+        <Section id="enforcement" title="If you break the rules">
+            <p>
+                We would rather fix a review than lose it, so the first step is almost always the
+                smallest one.
+            </p>
+            <Facts
+                rows={[
+                    ['First time, minor', 'The review is hidden and you are told what went wrong. Edit it and it goes straight back up.'],
+                    ['Repeated', 'The account is suspended while we look at everything posted from it.'],
+                    ['Serious', 'Threats, doxxing, or a campaign of fake reviews ends the account permanently, and we may remove the content without prior notice where the law requires it.'],
+                ]}
+            />
+            <p className="text-sm text-slate-500">
+                We interpret and enforce these guidelines ourselves, and we will tell you which
+                rule was applied and why. See also the{' '}
+                <Link to="/terms">Terms of Service</Link> and the{' '}
+                <Link to="/privacy">Privacy Policy</Link>.
+            </p>
+        </Section>
+    </LegalPage>
+);
 
 export default Guidelines;

@@ -7,16 +7,11 @@ import { pageVariants } from './animations'
 import Home from './pages/Home'
 import ProtectedRoute from './components/Protectedroute'
 import { logoutSuccess, loginSuccess } from './store/authSlice'
+import { getCurrentUser, verifySession } from './services/authService'
+import CookieConsent from './components/CookieConsent'
+import { primeCsrfToken } from './config/api'
 import { clearReviewData } from './store/reviewSlice'
 
-// ── Route-level code splitting ────────────────────────────────────────────
-// Every route used to be a static import, so opening the homepage downloaded the
-// review submission form, the Leaflet map, the browse grid and all six static
-// content pages before it painted — on the one page that decides whether a
-// visitor stays.
-//
-// Home stays eagerly imported: it is the most common entry point and lazy-loading
-// it would only add a round-trip. Everything else loads on navigation.
 const SignIn = lazy(() => import('./pages/Signin'))
 const SignUp = lazy(() => import('./pages/SignUp'))
 const WriteReview = lazy(() => import('./pages/WriteReview'))
@@ -25,6 +20,9 @@ const MapView = lazy(() => import('./pages/Mapview'))
 const PropertyDetail = lazy(() => import('./pages/Propertydetail'))
 const About = lazy(() => import('./pages/About'))
 const Privacy = lazy(() => import('./pages/Privacy'))
+const Cookies = lazy(() => import('./pages/Cookies'))
+const Security = lazy(() => import('./pages/Security'))
+const Grievance = lazy(() => import('./pages/Grievance'))
 const Terms = lazy(() => import('./pages/Terms'))
 const Help = lazy(() => import('./pages/Help'))
 const Contact = lazy(() => import('./pages/Contact'))
@@ -35,16 +33,13 @@ const MyReviews = lazy(() => import('./pages/MyReviews'))
 const AuthSuccess = lazy(() => import('./pages/AuthSuccess'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
+const ConfirmEmailChange = lazy(() => import('./pages/ConfirmEmailChange'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const AdminVerifications = lazy(() => import('./pages/AdminVerifications'))
+const AdminReports = lazy(() => import('./pages/AdminReports'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
-// Shown while a route chunk is in flight. Deliberately plain — a heavy skeleton
-// here flashes on fast connections and reads as jank.
-//
-// The fallback itself fades in after a beat rather than appearing instantly:
-// on a warm cache the chunk resolves in well under 200ms, and a spinner that
-// blinks in and straight back out is worse than no spinner at all.
+
 const RouteFallback = () => (
   <motion.div
     className="flex min-h-screen items-center justify-center bg-[#F9FAFB]"
@@ -59,28 +54,13 @@ const RouteFallback = () => (
   </motion.div>
 )
 
-// ── Page transitions ──────────────────────────────────────────────────────
-// Wrapping the route *element* rather than editing each page's root keeps the
-// transition in one place and leaves every page's own markup untouched.
-//
-// The wrapper is a plain block box, so it is invisible to layout: pages keep
-// their own min-h-screen roots and their sticky navbars behave as before.
-// Motion resets `transform` to `none` once the animation lands, so the brief
-// translate never becomes a containing block for the `position: fixed` modals
-// these pages render.
-//
-// Motion is short and small on purpose (8px + opacity, ~0.3s): a route change
-// already costs the reader their place, and a big movement on top of that
-// reads as lag rather than polish.
+
 const Page = ({ children }) => (
   <motion.div variants={pageVariants} initial="hidden" animate="show" exit="exit">
     {children}
   </motion.div>
 )
 
-// AnimatePresence needs a key that changes per route to run enter/exit. It sits
-// inside Suspense so a lazy chunk that is still loading shows the fallback
-// rather than an empty animated box.
 const AnimatedRoutes = () => {
   const location = useLocation()
 
@@ -90,16 +70,16 @@ const AnimatedRoutes = () => {
         <Route path="/" element={<Page><Home /></Page>} />
         <Route path="/signin" element={<Page><SignIn /></Page>} />
         <Route path="/signup" element={<Page><SignUp /></Page>} />
-        {/* PUBLIC: despite the name, /write-review is the property browse/search
-            grid (the submission form is /add-review). It is linked from the hero
-            search, the footer and the JSON-LD SearchAction, so it must stay
-            crawlable and reachable by signed-out visitors. */}
+      
         <Route path="/write-review" element={<Page><WriteReview /></Page>} />
         <Route path="/add-review" element={<Page><ProtectedRoute><AddReview /></ProtectedRoute></Page>} />
         <Route path="/map" element={<Page><MapView /></Page>} />
         <Route path="/property/:id" element={<Page><PropertyDetail /></Page>} />
         <Route path="/about" element={<Page><About /></Page>} />
         <Route path="/privacy" element={<Page><Privacy /></Page>} />
+        <Route path="/cookies" element={<Page><Cookies /></Page>} />
+        <Route path="/security" element={<Page><Security /></Page>} />
+        <Route path="/grievance" element={<Page><Grievance /></Page>} />
         <Route path="/terms" element={<Page><Terms /></Page>} />
         <Route path="/help" element={<Page><Help /></Page>} />
         <Route path="/contact" element={<Page><Contact /></Page>} />
@@ -111,9 +91,11 @@ const AnimatedRoutes = () => {
         <Route path="/auth-success" element={<Page><AuthSuccess /></Page>} />
         <Route path="/reset-password/:token" element={<Page><ResetPassword /></Page>} />
         <Route path="/verify-email/:token" element={<Page><VerifyEmail /></Page>} />
+        <Route path="/confirm-email-change/:token" element={<Page><ConfirmEmailChange /></Page>} />
 
         <Route path="/admin" element={<Page><ProtectedRoute><AdminDashboard /></ProtectedRoute></Page>} />
         <Route path="/admin/verifications" element={<Page><ProtectedRoute><AdminVerifications /></ProtectedRoute></Page>} />
+        <Route path="/admin/reports" element={<Page><ProtectedRoute><AdminReports /></ProtectedRoute></Page>} />
 
         <Route path="*" element={<Page><NotFound /></Page>} />
       </Routes>
@@ -121,12 +103,34 @@ const AnimatedRoutes = () => {
   )
 }
 
-// ── Cross-tab auth sync ───────────────────────────────────────────────────
-// Sign out (or in) in another tab and every other tab follows. This lives at
-// the app root rather than in a navbar: Navbar is only rendered by the
-// homepage, while the other pages use ReviewNavbar, so a listener there
-// left /profile, /my-reviews & co. showing a stale avatar and cached user.
-// Mounted here it is registered exactly once, on every route.
+
+const SessionCheck = () => {
+  const dispatch = useDispatch()
+
+  useEffect(() => {
+    let ignore = false
+    if (!getCurrentUser()) return undefined
+
+    // Warm the CSRF token alongside the check, so the first write a review
+    // submission with up to eleven files does not stall on a round-trip.
+    primeCsrfToken()
+
+    verifySession().then(({ status, user }) => {
+      if (ignore) return
+      if (status === 'valid') dispatch(loginSuccess({ user }))
+      else if (status === 'invalid') {
+        dispatch(logoutSuccess())
+        dispatch(clearReviewData())
+      }
+      // 'unknown' → keep the optimistic session; the next real request decides.
+    })
+
+    return () => { ignore = true }
+  }, [dispatch])
+
+  return null
+}
+
 // App itself is rendered inside <Provider> (see main.jsx), so useDispatch is
 // available; this stays a separate component only to keep App presentational.
 const CrossTabAuthSync = () => {
@@ -134,25 +138,25 @@ const CrossTabAuthSync = () => {
 
   useEffect(() => {
     const handleStorage = (e) => {
-      // e.key === null means storage.clear() — treat it as "something we care
+      // e.key === null means storage.clear() treat it as "something we care
       // about may have gone", and let the localStorage read below decide.
-      if (e.key !== null && e.key !== 'rr_token' && e.key !== 'rr_user') return
+      if (e.key !== null && e.key !== 'rr_user') return
 
-      const token = localStorage.getItem('rr_token')
-      if (!token) {
-        // Token removed in another tab → drop this tab's session and any
-        // review data cached for the user who just left.
+      // The session cookie is shared across tabs by the browser; what this
+      // syncs is the cached user object the UI renders from.
+      const raw = localStorage.getItem('rr_user')
+      if (!raw) {
+        // Signed out in another tab → drop this tab's session and any review
+        // data cached for the user who just left.
         dispatch(logoutSuccess())
         dispatch(clearReviewData())
         return
       }
 
-      // Token appeared (or changed) in another tab → rehydrate from storage.
       try {
-        const raw = localStorage.getItem('rr_user')
-        dispatch(loginSuccess({ token, user: raw ? JSON.parse(raw) : null }))
+        dispatch(loginSuccess({ user: JSON.parse(raw) }))
       } catch {
-        // Malformed rr_user — ignore rather than wedging the session.
+        // Malformed rr_user ignore rather than wedging the session.
       }
     }
     window.addEventListener('storage', handleStorage)
@@ -162,13 +166,7 @@ const CrossTabAuthSync = () => {
   return null
 }
 
-// ── Scroll restoration ────────────────────────────────────────────────────
-// SPAs keep the same document across navigations, so the browser never resets
-// the scroll position on its own: navigate from the bottom of a long page and
-// the next page opened mid-scroll. This resets to the top whenever the path
-// changes. Uses the "instant" behavior so a route change never animates a
-// scroll the user didn't perform. If a link carries a #hash, we honor it and
-// scroll to that element instead of the top.
+
 const ScrollToTop = () => {
   const { pathname, hash } = useLocation()
 
@@ -197,16 +195,11 @@ const ScrollToTop = () => {
 
 const App = () => {
   return (
-    // ── Motion, app-wide ──────────────────────────────────────────────────
-    // reducedMotion="user" makes every Motion animation in the app respect the
-    // OS-level "reduce motion" setting automatically: transforms and layout
-    // animations are skipped, opacity still cross-fades. Set once here so no
-    // individual component has to remember it.
-    //
-    // `transition` is the house default for anything that doesn't name its own
-    // — see src/animations/variants.js for the shared vocabulary.
+    
     <MotionConfig reducedMotion="user" transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}>
     <Router>
+      <SessionCheck />
+      <CookieConsent />
       <CrossTabAuthSync />
       <ScrollToTop />
       <Suspense fallback={<RouteFallback />}>

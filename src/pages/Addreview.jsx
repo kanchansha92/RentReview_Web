@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
     MapPin, X, Star, ShieldCheck, AlertTriangle, Upload, ChevronDown, Image as ImageIcon, Check,
 } from 'lucide-react';
@@ -611,11 +611,38 @@ const AddReview = () => {
                                 </div>
                             </div>
 
+                            {/*
+                              Consent notice, DPDP Act s.5 shown where the data is actually
+                              asked for, not only on the policy page.
+
+                              Four short lines, because this sits above a form someone is trying
+                              to finish. The old text ("we comply with all data protection
+                              regulations") said nothing and claimed everything; the long version
+                              that replaced it was five bullets nobody would read here. The detail
+                              lives on the Privacy page, one tap away.
+                            */}
                             <div className="flex items-start gap-2 rounded-lg border border-[#FEE685] bg-[#FFFBEB] p-3">
                                 <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[#E17100]" />
-                                <p className="text-[11px] sm:text-xs leading-snug text-[#973C00]">
-                                    <span className="font-bold">Privacy Notice:</span> Your ID will only be used for verification purposes and will not be shared publicly. We comply with all data protection regulations.
-                                </p>
+                                <div className="min-w-0 text-[11px] sm:text-xs leading-relaxed text-[#973C00]">
+                                    <p className="font-bold mb-1">What happens to your ID</p>
+                                    <p>
+                                        It is used only to check a real person wrote this review. It is
+                                        encrypted, only our verification staff can open it, and it is
+                                        deleted once checked or automatically after 30 days. It is
+                                        never shown on your review or to a landlord.
+                                    </p>
+                                    <p className="mt-1.5">
+                                        Don’t want to use Aadhaar? Any other document works the same.{' '}
+                                        <Link
+                                            to="/privacy#your-id"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="font-semibold underline underline-offset-2 hover:text-[#E17100]"
+                                        >
+                                            More detail
+                                        </Link>
+                                    </p>
+                                </div>
                             </div>
 
                             {/* ID Type */}

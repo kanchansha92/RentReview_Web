@@ -1,50 +1,37 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { STORAGE_KEYS } from '../config/api';
 
-export const TOKEN_KEY = 'rr_token';
-export const USER_KEY = 'rr_user';
+export const USER_KEY = STORAGE_KEYS.USER;
 
-const LOGGED_OUT = { token: null, user: null, isAuthenticated: false };
-
-const isUsableToken = (t) =>
-    typeof t === 'string' && t.length > 0 && t !== 'undefined' && t !== 'null';
+// The session is an HttpOnly cookie the page cannot read, so there is no token
+// in this store any more. `isAuthenticated` here means "render as signed in";
+// the server is the only thing that can actually confirm a session, which
+// getMe() does on boot. A forged rr_user therefore buys nothing: every
+// protected request still fails without the cookie.
+const LOGGED_OUT = { user: null, isAuthenticated: false };
 
 const clearStoredAuth = () => {
     try {
-        localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
     } catch {
-        // storage unavailable — nothing to clear
+        // storage unavailable nothing to clear
     }
 };
 
-
 const loadInitialState = () => {
-    let token = null;
-    let user = null;
-
-    try {
-        const rawToken = localStorage.getItem(TOKEN_KEY);
-        token = isUsableToken(rawToken) ? rawToken : null;
-    } catch {
-        return { ...LOGGED_OUT };
-    }
-
     try {
         const raw = localStorage.getItem(USER_KEY);
         const parsed = raw ? JSON.parse(raw) : null;
-        // Guard against `"null"`, `"123"` and other non-object payloads
-        user = parsed && typeof parsed === 'object' ? parsed : null;
+        // Guard against `"null"`, `"123"` and other non-object payloads.
+        const user = parsed && typeof parsed === 'object' ? parsed : null;
+        if (!user) {
+            clearStoredAuth();
+            return { ...LOGGED_OUT };
+        }
+        return { user, isAuthenticated: true };
     } catch {
-        user = null;
-    }
-
-   
-    if (!token || !user) {
-        clearStoredAuth();
         return { ...LOGGED_OUT };
     }
-
-    return { token, user, isAuthenticated: true };
 };
 
 const authSlice = createSlice({
@@ -52,24 +39,23 @@ const authSlice = createSlice({
     initialState: loadInitialState(),
     reducers: {
         /**
-         * Call after a successful login / register / OAuth.
-         * Payload: { token: string, user: object }
+         * Call after a successful login / register / OAuth exchange.
+         * Payload: { user } a bare user object is also accepted, since the
+         * server no longer returns a token to pair it with.
          */
         loginSuccess(state, action) {
-            const { token, user } = action.payload || {};
-            // Both halves are required — a token with no user is not a session.
-            if (!isUsableToken(token) || !user || typeof user !== 'object') {
-                state.token = null;
+            const payload = action.payload || {};
+            const user = payload.user !== undefined ? payload.user : payload;
+
+            if (!user || typeof user !== 'object' || !Object.keys(user).length) {
                 state.user = null;
                 state.isAuthenticated = false;
                 return;
             }
-            state.token = token;
             state.user = user;
             state.isAuthenticated = true;
         },
 
-      
         updateUser(state, action) {
             const changes = action.payload;
             if (!changes || typeof changes !== 'object') return;
@@ -77,11 +63,8 @@ const authSlice = createSlice({
             state.user = { ...state.user, ...changes };
         },
 
-        /**
-         * Clear all auth state (sign-out).
-         */
+        /** Clear all auth state (sign-out). */
         logoutSuccess(state) {
-            state.token = null;
             state.user = null;
             state.isAuthenticated = false;
         },
@@ -92,7 +75,6 @@ export const { loginSuccess, updateUser, logoutSuccess } = authSlice.actions;
 
 // Selectors
 export const selectUser = (state) => state.auth.user;
-export const selectToken = (state) => state.auth.token;
 export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
 
 export default authSlice.reducer;

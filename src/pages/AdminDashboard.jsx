@@ -11,6 +11,7 @@ import {
     Map,
     Loader2,
     UserCog,
+    Flag,
 } from 'lucide-react';
 import ReviewNavbar from '../components/ReviewNavbar';
 import { getPendingVerifications, getReviews, getProperties } from '../services/reviewService';
@@ -49,6 +50,13 @@ const STAT_CARDS = [
 
 const TOOLS = [
     {
+        to: '/admin/reports',
+        icon: Flag,
+        title: 'Reported reviews',
+        body:
+            'Complaints from people a review is about. Each was acknowledged by email on arrival and needs an outcome within 15 days - hide the review, publish their response, or dismiss it.',
+    },
+    {
         to: '/admin/verifications',
         icon: ClipboardCheck,
         title: 'ID Verification Queue',
@@ -72,7 +80,7 @@ const TOOLS = [
 ];
 
 const AdminDashboard = () => {
-    // Admin surface — never index it. robots.txt disallows /admin/ as well, but
+    // Admin surface never index it. robots.txt disallows /admin/ as well, but
     // that only asks politely; this tag is the one crawlers act on per-page.
     useSeo({ title: 'Admin | RentReview', noindex: true });
 
@@ -102,7 +110,7 @@ const AdminDashboard = () => {
                     dispatch(updateUser({ role: fresh.role }));
                 }
             })
-            // A failure here is not worth a banner — the page still renders
+            // A failure here is not worth a banner the page still renders
             // whatever the cached role allows, which is the status quo.
             .catch(() => {});
 
@@ -135,7 +143,7 @@ const AdminDashboard = () => {
             });
 
             // Surface a message only if something actually failed, and only the
-            // first one — three stacked "server error" banners say nothing extra.
+            // first one three stacked "server error" banners say nothing extra.
             const failed = results.find((r) => r.status === 'rejected');
             if (failed) setError(failed.reason?.message || 'Some figures could not be loaded.');
 
@@ -232,7 +240,7 @@ const AdminDashboard = () => {
                                                         accent && value > 0 ? 'text-[#41B985]' : 'text-[#0A0A0A]'
                                                     }`}
                                                 >
-                                                    {/* null means the request failed — an em dash is honest,
+                                                    {/* null means the request failed an em dash is honest,
                                                         a 0 would read as "queue is clear". */}
                                                     {value === null ? '-' : value.toLocaleString()}
                                                 </span>
@@ -272,7 +280,7 @@ const AdminDashboard = () => {
                             ))}
                         </Stagger>
 
-                        {/* Roles are granted from the server only — there is no API for it,
+                        {/* Roles are granted from the server only there is no API for it,
                             so saying where the switch lives beats leaving an admin hunting. */}
                         <p className="mt-8 flex items-start gap-2 rounded-xl border border-black/10 bg-white px-4 py-3 text-xs text-slate-500">
                             <UserCog className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />

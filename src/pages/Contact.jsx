@@ -6,20 +6,23 @@ import {
   Clock, CheckCircle2, Loader2, Sparkles, ShieldCheck,
 } from 'lucide-react';
 import ReviewNavbar from '../components/ReviewNavbar';
-import { API_BASE_URL } from '../config/api';
+import { apiFetch } from '../config/api';
 import useSeo from '../hooks/useSeo';
 import { SITE_URL, LOGO_URL } from '../config/site';
 import { serializeJsonLd } from '../utils/jsonLd';
+import { CONTACT_EMAIL } from '../config/legal';
 import { Reveal, motion, staggerContainer, fadeUp } from '../animations';
 
 // ── Contact details (single source of truth for both UI and JSON-LD) ─────
+// The address comes from config/legal.js so this page, the Privacy Policy, the
+// Cookie page, Security and Complaints can never disagree about where to write.
 const CONTACT = {
-  email: 'support@rentreview.in',
-  phone: '+91 80 0000 0000',
+  email: CONTACT_EMAIL,
+  // phone: '+91 80 0000 0000',
   phoneTel: '+918000000000', // for tel: link
   responseTime: 'Avg. response: 2 hours',
   hours: 'Mon-Fri, 9am - 6pm IST',
-  addressLine1: 'Bangalore, Karnataka',
+  addressLine1: 'Devarabisanahalli, Bellandur, Bengaluru, Karnataka 560103',
   addressLine2: 'India',
   addressTagline: 'Visit us for a coffee!',
 };
@@ -30,7 +33,7 @@ const Contact = () => {
     email: '',
     subject: '',
     message: '',
-    website: '', // honeypot — hidden from humans, filled in by bots
+    website: '', // honeypot hidden from humans, filled in by bots
   });
   const [submitState, setSubmitState] = useState('idle'); // 'idle' | 'submitting' | 'success' | 'error'
   const [submitError, setSubmitError] = useState('');
@@ -64,7 +67,7 @@ const Contact = () => {
             '@type': 'ContactPoint',
             contactType: 'customer support',
             email: CONTACT.email,
-            telephone: CONTACT.phone,
+         
             availableLanguage: ['English', 'Hindi'],
             areaServed: 'IN',
             hoursAvailable: {
@@ -108,10 +111,9 @@ const Contact = () => {
     setFieldErrors({});
 
     try {
-      const res = await fetch(`${API_BASE_URL}/contact`, {
+      const res = await apiFetch('/contact', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: ({
           name: formData.name.trim(),
           email: formData.email.trim(),
           subject: formData.subject.trim(),
@@ -121,7 +123,7 @@ const Contact = () => {
       });
 
       // A 429 / 502 from the API still returns JSON, but a proxy or cold-start
-      // failure can return HTML — don't let JSON.parse mask the real status.
+      // failure can return HTML don't let JSON.parse mask the real status.
       let data = {};
       try {
         data = await res.json();
@@ -242,7 +244,7 @@ const Contact = () => {
               </motion.h1>
 
               <motion.p variants={fadeUp} className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#475569] sm:mt-6 sm:text-lg lg:text-xl">
-                Questions, feedback, or help with a review -our team is here for you.
+                Questions, feedback, or help with a review our team is here for you.
                 Send us a message and we'll get back to you fast.
               </motion.p>
             </motion.div>
@@ -271,7 +273,7 @@ const Contact = () => {
                     Contact Information
                   </h2>
                   <p className="mt-2 text-sm font-medium text-white/80 sm:text-base">
-                    Reach us directly, or use the form -whatever works for you.
+                    Reach us directly, or use the form whatever works for you.
                   </p>
 
                   <ul className="mt-8 list-none space-y-6 sm:mt-10 sm:space-y-7">
@@ -301,7 +303,7 @@ const Contact = () => {
                     </li>
 
                     {/* Phone */}
-                    <li className="group flex items-start gap-4">
+                    {/* <li className="group flex items-start gap-4">
                       <div
                         aria-hidden="true"
                         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm transition-transform group-hover:scale-110"
@@ -322,7 +324,7 @@ const Contact = () => {
                           {CONTACT.hours}
                         </p>
                       </div>
-                    </li>
+                    </li> */}
 
                     {/* Office */}
                     <li className="group flex items-start gap-4">

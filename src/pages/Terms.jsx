@@ -1,207 +1,258 @@
-import React, { useMemo } from 'react';
+
+import React from 'react';
 import { Link } from 'react-router-dom';
-import Footer from '../components/Footer';
-import { Gavel, AlertCircle, Scale, ShieldAlert } from 'lucide-react';
-import ReviewNavbar from '../components/ReviewNavbar';
-import useSeo from '../hooks/useSeo';
-import { SITE_URL } from '../config/site';
-import { serializeJsonLd } from '../utils/jsonLd';
-import { Reveal, motion } from '../animations';
+import LegalPage, { Section, List, Facts, Note } from '../components/legal/LegalPage';
+import { CONTACT_EMAIL, ENTITY, RETENTION, GRIEVANCE_OFFICER } from '../config/legal';
 
-// Effective date drives both the visible label AND the JSON-LD `lastReviewed`.
-// Update this whenever you materially change the terms.
-const EFFECTIVE_DATE_ISO = '2026-05-28';
-const EFFECTIVE_DATE_DISPLAY = 'May 28, 2026';
-
-const TERMS = [
-  {
-    title: '1. Acceptance of Terms',
-    icon: Scale,
-    content:
-      'By accessing or using RentReview, you agree to be bound by these Terms of Service. If you do not agree to all of these terms, do not use our platform.',
-  },
-  {
-    title: '2. User Conduct',
-    icon: Gavel,
-    content:
-      'Users are responsible for the content they post. Reviews must be honest, based on personal experience, and free from harassment, hate speech, or defamatory language. We reserve the right to remove content at our discretion.',
-  },
-  {
-    title: '3. Service Accuracy',
-    icon: AlertCircle,
-    content:
-      'While we strive for accuracy, reviews reflect personal opinions. RentReview does not guarantee the completeness or reliability of any feedback or property information on the platform.',
-  },
-  {
-    title: '4. Platform Rights',
-    icon: ShieldAlert,
-    content:
-      'We reserve the right to modify or terminate the service for any reason, without notice, at any time. We also reserve the right to refuse service to anyone for any reason.',
-  },
+const SECTIONS = [
+    { id: 'short-version', title: 'The short version' },
+    { id: 'who-can-use', title: 'Who can use this' },
+    { id: 'your-account', title: 'Your account' },
+    { id: 'what-you-post', title: 'What you post' },
+    { id: 'rules', title: 'What is not allowed' },
+    { id: 'complaints', title: 'Complaints and takedowns' },
+    { id: 'our-role', title: 'What RentReview is not' },
+    { id: 'ads', title: 'Ads' },
+    { id: 'ending', title: 'Ending your account' },
+    { id: 'liability', title: 'Limits of our liability' },
+    { id: 'law', title: 'Which law applies' },
+    { id: 'changes', title: 'Changes' },
+    { id: 'contact', title: 'Contact us' },
 ];
 
-const Terms = () => {
-  useSeo({
-    title: 'Terms of Service | RentReview',
-    description:
-      "Read RentReview's Terms of Service. Understand your rights and responsibilities when using our rental review platform.",
-    path: '/terms',
-  });
+const mail = (a) => <a href={`mailto:${a}`} className="break-all">{a}</a>;
 
-  // ── JSON-LD structured data ─────────────────────────────────────────────
-  const pageSchema = useMemo(
-    () => ({
-      '@context': 'https://schema.org',
-      '@type': 'WebPage',
-      name: 'Terms of Service',
-      url: `${SITE_URL}/terms`,
-      description:
-        "RentReview's Terms of Service governing user access and conduct on the platform.",
-      inLanguage: 'en',
-      lastReviewed: EFFECTIVE_DATE_ISO,
-      isPartOf: {
-        '@type': 'WebSite',
-        name: 'RentReview',
-        url: SITE_URL,
-      },
-    }),
-    []
-  );
-
-  const breadcrumbSchema = useMemo(
-    () => ({
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
-        { '@type': 'ListItem', position: 2, name: 'Terms of Service', item: `${SITE_URL}/terms` },
-      ],
-    }),
-    []
-  );
-
-  return (
-    <div className="min-h-screen bg-white font-sans text-slate-900 flex flex-col">
-      <ReviewNavbar />
-
-      <main className="flex-1 py-10 px-4 sm:py-14 sm:px-6 lg:py-20 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-
-          {/* Breadcrumb */}
-          <nav aria-label="Breadcrumb" className="mb-4 sm:mb-6">
-            <ol className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm text-slate-500 list-none">
-              <li>
-                <Link to="/" className="hover:text-[#41B985] transition-colors">Home</Link>
-              </li>
-              <li aria-hidden="true" className="text-slate-300">/</li>
-              <li>
-                <span className="text-slate-700 font-medium">Terms of Service</span>
-              </li>
-            </ol>
-          </nav>
-
-          {/* Header */}
-          <Reveal as="header" className="text-center mb-10 sm:mb-12 lg:mb-16">
-            <div className="inline-flex items-center gap-2 mb-3 sm:mb-4">
-              {/* The brand rule draws itself out from the left. */}
-              <motion.div
-                aria-hidden="true"
-                className="h-1 w-8 origin-left rounded-full bg-[#41B985]"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
-              />
-              <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] text-[#41B985] uppercase">
-                Legal
-              </span>
+const Terms = () => (
+    <LegalPage
+        title="Terms of Service"
+        path="/terms"
+        seoDescription="The rules for using RentReview: who can post, what a review may and may not say, how complaints are handled, and what we are not responsible for. Written in plain language."
+        intro="These are the rules for using RentReview. They matter most in two moments  when you write a review, and when someone complains about one  so those two parts come first."
+        sections={SECTIONS}
+    >
+        <Section id="short-version" title="The short version">
+            <div className="rounded-2xl border border-[#41B985]/20 bg-[#41B985]/[0.05] p-5 sm:p-6">
+                <List
+                    items={[
+                        <>Using the site means you <strong>accept these terms</strong>. If you do not, please do not use it.</>,
+                        <>You must be <strong>18 or over</strong> and write only about places you have actually rented or visited.</>,
+                        <>Your review must be <strong>your own honest experience</strong>  not rumour, not revenge, not an advert.</>,
+                        <>Reviews are <strong>public and indexed by search engines</strong>. Write them as if the landlord will read them, because they will.</>,
+                        <>You <strong>keep ownership</strong> of what you write. You give us permission to publish it here.</>,
+                        <>We can <strong>hide or remove</strong> content that breaks these rules, and you can appeal that.</>,
+                    ]}
+                />
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 mb-3 sm:mb-4 tracking-tight">
-              Terms of Service
-            </h1>
-            <p className="text-sm sm:text-base text-slate-500">
-              Effective Date:{' '}
-              <time dateTime={EFFECTIVE_DATE_ISO} className="font-medium">
-                {EFFECTIVE_DATE_DISPLAY}
-              </time>
+        </Section>
+
+        <Section id="who-can-use" title="Who can use this">
+            <p>
+                RentReview is for adults renting homes in India. You may use it if you are{' '}
+                <strong>18 or over</strong> and able to enter a contract. If you are using it on
+                behalf of a company, you are confirming you are allowed to agree to these terms
+                for it.
             </p>
-          </Reveal>
-
-          {/* Terms article */}
-          <article>
-            {/* Intro callout */}
-            <div className="mb-8 sm:mb-10 lg:mb-12 p-5 sm:p-6 lg:p-8 bg-[#41B985]/10 border border-[#41B985]/20 rounded-2xl text-[#064E3B]">
-              <p className="text-sm sm:text-base font-medium leading-relaxed">
-                Welcome to RentReview. These Terms of Service ("Terms") govern your access to and use of the
-                RentReview website and services. Please read them carefully before using our platform.
-              </p>
-            </div>
-
-            {/* Terms grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 lg:gap-8">
-              {TERMS.map((term, i) => {
-                const Icon = term.icon;
-                return (
-                  <Reveal as="section"
-                    key={i}
-                    aria-labelledby={`term-${i}`}
-                    className="p-5 sm:p-6 lg:p-8 rounded-2xl border border-slate-100 hover:border-[#41B985]/40 hover:shadow-lg hover:shadow-[#41B985]/5 transition-all duration-300 bg-white"
-                  >
-                    <div
-                      aria-hidden="true"
-                      className="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 rounded-xl bg-[#41B985]/10 flex items-center justify-center mb-4 sm:mb-5 lg:mb-6"
-                    >
-                      <Icon className="w-5 h-5 lg:w-6 lg:h-6 text-[#41B985]" />
-                    </div>
-                    <h2
-                      id={`term-${i}`}
-                      className="text-base sm:text-lg lg:text-xl font-bold text-slate-800 mb-3 sm:mb-4"
-                    >
-                      {term.title}
-                    </h2>
-                    <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-                      {term.content}
-                    </p>
-                  </Reveal>
-                );
-              })}
-            </div>
-
-            {/* See also: Privacy Policy */}
-            <p className="mt-8 sm:mt-10 lg:mt-12 text-sm text-slate-600 text-center">
-              See also:{' '}
-              <Link to="/privacy" className="text-[#41B985] font-medium hover:underline">
-                Privacy Policy
-              </Link>
+            <p>
+                You may read the site without an account. You need an account to write a review,
+                reply to one, or report one.
             </p>
+        </Section>
 
-            {/* Footer disclaimer */}
-            <aside
-              role="note"
-              className="mt-10 sm:mt-12 lg:mt-16 pt-8 sm:pt-10 lg:pt-12 text-center border-t border-slate-100"
-            >
-              <p className="text-xs sm:text-sm text-slate-500 max-w-2xl mx-auto italic leading-relaxed">
-                Disclaimer: These terms are for demonstration purposes as part of the implementation. For a
-                real platform, please consult with legal counsel to ensure compliance with local laws and
-                regulations.
-              </p>
-            </aside>
-          </article>
+        <Section id="your-account" title="Your account">
+            <Facts
+                rows={[
+                    ['One person, one account', 'Do not run several accounts to make a property look better or worse than it is.'],
+                    ['Real details', 'Sign up with a name and email address you actually use. We email you about password and email changes, and those warnings only work if they reach you.'],
+                    ['Your password is yours', 'Keep it to yourself. Anything done from your account is treated as done by you.'],
+                    ['Verification', `We ask for a government ID once per review, so that a real person stands behind each one. The document is deleted once checked, or after ${RETENTION.idProof} days.`],
+                ]}
+            />
+            <p>
+                What happens to that ID is explained in full on the{' '}
+                <Link to="/privacy">Privacy Policy</Link>. Short version: nobody but our
+                verification staff ever sees it, and it is never attached to your review.
+            </p>
+            <Note>
+                <p>
+                    We will never ask you to email us your ID, your password, or a one-time code.
+                    If someone does, it is not us.
+                </p>
+            </Note>
+        </Section>
 
-          {/* JSON-LD structured data */}
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: serializeJsonLd(pageSchema) }}
-          />
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbSchema) }}
-          />
-        </div>
-      </main>
+        <Section id="what-you-post" title="What you post">
+            <p>
+                You keep ownership of your reviews and photos. By posting them you give us a
+                licence to store, display and distribute them on RentReview  including in search
+                results and on the property's page  for as long as they are published. That
+                licence ends when you delete the content, except for copies already cached or
+                indexed elsewhere, which we cannot reach.
+            </p>
+            <Facts
+                rows={[
+                    ['It must be first-hand', 'Write about a place you rented, lived in, or genuinely viewed. Not what a friend told you.'],
+                    ['It must be honest', 'Opinions are fine, and welcome. Stating something as a fact when it is not is not.'],
+                    ['Photos must be yours', 'Only upload pictures you took. Do not upload photos of people who have not agreed to it.'],
+                    ['No personal details', 'We block reviews containing phone numbers, email addresses and long ID numbers  including your own. Once a page like that is indexed, it cannot really be taken back.'],
+                ]}
+            />
+            <p>
+                The <Link to="/guidelines">Community Guidelines</Link> go through this with
+                examples of reviews that pass and reviews that do not.
+            </p>
+            <Note tone="warn">
+                <p>
+                    <strong>A review is public and permanent-ish.</strong> Search engines copy
+                    pages quickly and forget them slowly. Deleting a review removes it from
+                    RentReview, but we cannot remove it from someone else's cache or screenshot.
+                </p>
+            </Note>
+        </Section>
 
-      <Footer />
-    </div>
-  );
-};
+        <Section id="rules" title="What is not allowed">
+            <p>Do not use RentReview to:</p>
+            <List
+                items={[
+                    <>Post anything <strong>false, misleading or defamatory</strong> about a person or property.</>,
+                    <>Harass, threaten or abuse anyone, or post <strong>hate speech</strong>.</>,
+                    <>Publish someone's <strong>private information</strong>  their phone number, address, workplace or documents.</>,
+                    <>Post <strong>paid, fake or incentivised reviews</strong>, for yourself or anyone else.</>,
+                    <>Advertise, spam, or promote a property, agent or service.</>,
+                    <>Scrape, copy in bulk, or resell content from the site.</>,
+                    <>Break the site  probing for weaknesses, overloading it, or getting around our rate limits.</>,
+                ]}
+            />
+            <p>
+                Found a security weakness rather than causing one? Please report it privately 
+                the <Link to="/security">Security page</Link> explains how.
+            </p>
+        </Section>
+
+        <Section id="complaints" title="Complaints and takedowns">
+            <p>
+                Anyone can report a review with the <strong>Report</strong> button beneath it. A
+                person reads every report.
+            </p>
+            <Facts
+                rows={[
+                    ['If we agree with the complaint', 'The review is hidden, not deleted. It disappears from the site, but you can still see it in My Reviews, and it can be put back.'],
+                    ['If we do not', 'The review stays up and the person who reported it is told.'],
+                    ['Either way', 'You are notified, and you can reply to the decision.'],
+                    ['How fast', `${GRIEVANCE_OFFICER.acknowledgeHours} hours to acknowledge a complaint, ${GRIEVANCE_OFFICER.resolveDays} days to resolve it.`],
+                ]}
+            />
+            <p>
+                Hiding rather than deleting is deliberate: a false complaint should not be able
+                to quietly erase what you wrote. The full process, including how to escalate if
+                you disagree with us, is on the <Link to="/grievance">Complaints page</Link>.
+            </p>
+            <p>
+                We may also remove content or suspend an account without a complaint if it
+                clearly breaks these terms or the law.
+            </p>
+        </Section>
+
+        <Section id="our-role" title="What RentReview is not">
+            <p>
+                We are a place for tenants to publish their own experiences. That has limits
+                worth being clear about.
+            </p>
+            <Facts
+                rows={[
+                    ['Reviews are opinions', 'They are the views of the people who wrote them, not ours. We check that a real person wrote each one  not that every statement in it is correct.'],
+                    ['We are not an agent or broker', 'We do not list, let, sell or inspect property, and we take no part in any deal you make with a landlord.'],
+                    ['We do not give legal advice', 'Nothing here is advice about your tenancy, your deposit or your rights. Speak to a lawyer or a tenants’ association.'],
+                    ['Ratings are averages', 'A score is an average of what people chose to post. It is a starting point for your own checks, not a verdict.'],
+                ]}
+            />
+            <p>
+                Check a property yourself before you commit to it  visit it, read the agreement,
+                and meet the landlord.
+            </p>
+        </Section>
+
+        <Section id="ads" title="Ads">
+            <p>
+                RentReview is free to use and is paid for by advertising. Ads only load if you
+                accept advertising cookies, and you can change your mind at any time on the{' '}
+                <Link to="/cookies">Cookie page</Link>.
+            </p>
+            <p>
+                Advertisers have no say in reviews, ratings or moderation decisions, and nobody
+                can pay to have a review removed or a rating changed.
+            </p>
+        </Section>
+
+        <Section id="ending" title="Ending your account">
+            <Facts
+                rows={[
+                    ['You can leave any time', 'Settings → Privacy deletes your account, your reviews, their photos and any ID still waiting to be checked. It happens straight away and cannot be undone.'],
+                    ['Take your data with you', 'Download a copy of your account and every review you have written before you go.'],
+                    ['We can suspend an account', 'For repeated or serious breaches of these terms, or where the law requires it. Where we reasonably can, we tell you why first.'],
+                    ['We can close the service', 'If we ever shut RentReview down, we will give notice and time to export your reviews.'],
+                ]}
+            />
+        </Section>
+
+        <Section id="liability" title="Limits of our liability">
+            <p>
+                RentReview is provided as it is. We work to keep it accurate and available, but
+                we cannot promise the site will never be down, never contain a mistake, or that
+                every review on it is true.
+            </p>
+            <p>
+                To the extent the law allows, we are not liable for losses arising from something
+                someone else posted, from a decision you made based on a review, or from a
+                dispute between you and a landlord. Nothing here limits liability that cannot be
+                limited by law  including for death, personal injury, or our own fraud.
+            </p>
+            <Note>
+                <p>
+                    If you believe a review about you is false, the fastest route is the{' '}
+                    <strong>Report</strong> button on the review itself. It reaches a person, and
+                    it is far quicker than a legal letter.
+                </p>
+            </Note>
+        </Section>
+
+        <Section id="law" title="Which law applies">
+            <p>
+                These terms are governed by the laws of India, and the courts of India have
+                jurisdiction over any dispute arising from them.
+            </p>
+            <p>
+                As an intermediary, we follow the Information Technology Act 2000 and the IT
+                Rules 2021, and we handle personal data under the Digital Personal Data
+                Protection Act 2023. The <Link to="/privacy">Privacy Policy</Link> and the{' '}
+                <Link to="/grievance">Complaints page</Link> set out what that means in practice.
+            </p>
+        </Section>
+
+        <Section id="changes" title="Changes">
+            <p>
+                We update this page as the site changes, and the date at the top always shows the
+                last change. If we change something that materially affects you, we will email
+                you rather than expecting you to notice a new date. Carrying on using the site
+                after a change means you accept the updated terms.
+            </p>
+        </Section>
+
+        <Section id="contact" title="Contact us">
+            <p className="text-lg">
+                Email <strong>{mail(CONTACT_EMAIL)}</strong> about anything to do with these
+                terms.
+            </p>
+            <p>
+                You can also use the <Link to="/contact">contact form</Link>. To complain about a
+                specific review, use the <strong>Report</strong> button under it  see{' '}
+                <Link to="/grievance">Complaints</Link>. For questions about your data, see the{' '}
+                <Link to="/privacy">Privacy Policy</Link>.
+            </p>
+            <p className="text-sm text-slate-500">
+                Service operated by {ENTITY.legalName}, {ENTITY.address}.
+            </p>
+        </Section>
+    </LegalPage>
+);
 
 export default Terms;

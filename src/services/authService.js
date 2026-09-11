@@ -1,13 +1,18 @@
 // ─── Auth Service ─────────────────────────────────────────────────────────────
 // Centralised helpers so every component reads/writes auth state the same way.
+//
+// There is no token here any more. The session is an HttpOnly cookie set by the
+// server, which this code cannot read and an injected script cannot steal. What
+// stays in localStorage is the user OBJECT, and only so the UI has something to
+// render before /auth/me answers it authorises nothing.
 
-import { API_BASE_URL, handleUnauthorized } from '../config/api';
+import { apiFetch, apiJson, handleUnauthorized, clearCsrfToken, STORAGE_KEYS } from '../config/api';
 
-const TOKEN_KEY = 'rr_token';
-const USER_KEY = 'rr_user';
+const USER_KEY = STORAGE_KEYS.USER;
 
 /**
- * Returns the parsed user object stored after login/register, or null.
+ * Returns the cached user object, or null. Optimistic only: the server decides
+ * whether the session is real, and getMe() below is what confirms it.
  */
 export const getCurrentUser = () => {
     try {
@@ -18,121 +23,162 @@ export const getCurrentUser = () => {
     }
 };
 
-/**
- * Returns the JWT token string, or null.
- */
-export const getToken = () => localStorage.getItem(TOKEN_KEY) || null;
-
-/**
- * Stores token + user after a successful login/register response.
- * @param {string} token
- * @param {object} user
- */
-export const saveAuth = (token, user) => {
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+/** Cache the user after a successful login/register/OAuth. */
+export const saveAuth = (user) => {
+    try {
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+    } catch {
+        // storage unavailable the session cookie still works, the UI just
+        // has nothing to show until /auth/me answers.
+    }
 };
 
 /**
- * Clears all auth data from localStorage (sign-out).
+ * Sign out. The cookie is HttpOnly, so only the server can clear it the
+ * local cache is dropped either way, so a failed request still signs you out
+ * of this tab rather than leaving it in a half state.
  */
-export const logout = () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+export const logout = async () => {
+    let serverCleared = false;
+    try {
+        const res = await apiFetch('/auth/logout', { method: 'POST' });
+        serverCleared = res.ok;
+        if (!res.ok) {
+            // Worth knowing about: the local state says signed out while the
+            // cookie may still be live. /auth/logout is not CSRF-gated, so this
+            // should only ever be a network or server fault.
+            console.error('Sign-out request failed:', res.status);
+        }
+    } catch (err) {
+        console.error('Sign-out request failed:', err && err.message);
+    }
+    try {
+        localStorage.removeItem(USER_KEY);
+    } catch {
+        /* nothing to clear */
+    }
+    clearCsrfToken();
+    return serverCleared;
 };
 
 /**
- * Returns true if a token exists (user is considered logged in).
+ * True if we have a cached user. Optimistic: it says "render as signed in",
+ * not "this session is valid" only the server can answer that.
  */
-export const isAuthenticated = () => Boolean(getToken());
+export const isAuthenticated = () => Boolean(getCurrentUser());
 
 /**
- * Fetches latest user data from server.
+ * Checks the session WITHOUT redirecting, and tells the three cases apart:
+ *
+ *   'valid'   the server confirmed the session, `user` is fresh
+ *   'invalid' the server said 401; the session is genuinely gone
+ *   'unknown' we could not reach the server (offline, or a cold-start 502)
+ *
+ * The distinction matters: treating 'unknown' as signed-out would drop a
+ * perfectly good session every time the API is slow to wake, and a background
+ * check must never bounce someone off the public page they are reading.
+ */
+export const verifySession = async () => {
+    let res;
+    try {
+        res = await apiFetch('/auth/me');
+    } catch {
+        return { status: 'unknown', user: null };
+    }
+
+    if (res.status === 401) return { status: 'invalid', user: null };
+    if (!res.ok) return { status: 'unknown', user: null };
+
+    const data = await res.json().catch(() => ({}));
+    if (!data.user) return { status: 'unknown', user: null };
+
+    saveAuth(data.user);
+    return { status: 'valid', user: data.user };
+};
+
+/**
+ * Fetches the latest user from the server. This is also the session check:
+ * it answers 401 when the cookie is missing or expired.
  */
 export const getMe = async () => {
-    const token = getToken();
-    if (!token) return null;
-
-    const res = await fetch(`${API_BASE_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    let res;
+    try {
+        res = await apiFetch('/auth/me');
+    } catch {
+        return null;
+    }
 
     if (res.status === 401) {
         handleUnauthorized();
         return null;
     }
 
-    // A Render cold start answers with an HTML 502 -res.json() would throw and
-    // take the caller down with it. Degrade to an empty object instead.
     const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-        if (data.user) localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-        return data.user || null;
+    if (res.ok && data.user) {
+        saveAuth(data.user);
+        return data.user;
     }
     return null;
 };
 
 /**
- * Updates user profile.
+ * Updates the profile. Changing the email address additionally requires
+ * `currentPassword`, and does not take effect until the NEW address confirms
+ * it the response says so via `emailChangePending`.
  */
 export const updateUserProfile = async (userData) => {
-    const token = getToken();
-    const res = await fetch(`${API_BASE_URL}/auth/me`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(userData)
-    });
+    const res = await apiFetch('/auth/me', { method: 'PUT', body: userData });
 
     if (res.status === 401) {
-        handleUnauthorized();
-        return { success: false, message: 'Your session has expired. Please sign in again.' };
+        // A wrong current password also answers 401 here; only a genuinely
+        // expired session should bounce to sign-in.
+        const data = await res.json().catch(() => ({}));
+        if (!/password/i.test(data.message || '')) {
+            handleUnauthorized();
+            return { success: false, message: 'Your session has expired. Please sign in again.' };
+        }
+        return { success: false, message: data.message };
     }
 
     const data = await res.json().catch(() => ({}));
-    if (res.ok && data.user) {
-        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-    }
+    if (res.ok && data.user) saveAuth(data.user);
     return data;
 };
 
-
 export const changePassword = async (passwords) => {
-    const token = getToken();
-    const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(passwords)
-    });
-
+    const res = await apiFetch('/auth/change-password', { method: 'PUT', body: passwords });
     const data = await res.json().catch(() => ({}));
 
- 
     if (res.status === 401 && !/current password/i.test(data.message || '')) {
         handleUnauthorized();
         return { success: false, message: 'Your session has expired. Please sign in again.' };
     }
 
-
     return data;
 };
 
-
 export const verifyEmail = async (token) => {
-    const res = await fetch(`${API_BASE_URL}/auth/verify-email/${encodeURIComponent(token)}`, {
-        method: 'PUT',
-    });
+    const res = await apiFetch(`/auth/verify-email/${encodeURIComponent(token)}`, { method: 'PUT' });
 
-    // A Render cold start answers with an HTML 502 -res.json() would throw and
-    // surface as "couldn't connect" instead of the real outcome.
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
         throw new Error(data.message || 'That confirmation link is invalid or has expired.');
+    }
+    return data;
+};
+
+/**
+ * Applies a pending email change. The token comes from the link sent to the
+ * NEW address; opening it is what proves that address is reachable.
+ */
+export const confirmEmailChange = async (token) => {
+    const res = await apiFetch(`/auth/confirm-email-change/${encodeURIComponent(token)}`, {
+        method: 'PUT',
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        throw new Error(data.message || 'That link is invalid or has expired.');
     }
     return data;
 };
@@ -142,11 +188,7 @@ export const verifyEmail = async (token) => {
  * own address. Resolves with { success, message, alreadyVerified? }.
  */
 export const resendVerification = async () => {
-    const token = getToken();
-    const res = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await apiFetch('/auth/resend-verification', { method: 'POST' });
 
     if (res.status === 401) {
         handleUnauthorized();
@@ -158,4 +200,34 @@ export const resendVerification = async () => {
         return { success: false, message: data.message || "We couldn't send that email. Please try again." };
     }
     return data;
+};
+
+/**
+ * Downloads everything the server holds about the signed-in user as JSON.
+ */
+export const exportMyData = async () => {
+    return apiJson('/auth/me/export');
+};
+
+/**
+ * Permanently deletes the account and every review. Password accounts confirm
+ * with { password }; social-only accounts with { confirmation: 'DELETE' }.
+ */
+export const deleteMyAccount = async (payload) => {
+    const res = await apiFetch('/auth/me', { method: 'DELETE', body: payload || {} });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 401 && !/password/i.test(data.message || '')) {
+        handleUnauthorized();
+        return { success: false, message: 'Your session has expired. Please sign in again.' };
+    }
+
+    if (res.ok && data.success) {
+        try {
+            localStorage.removeItem(USER_KEY);
+        } catch {
+            /* nothing to clear */
+        }
+    }
+    return { success: Boolean(res.ok && data.success), message: data.message || '' };
 };

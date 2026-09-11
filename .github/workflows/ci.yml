@@ -1,0 +1,42 @@
+# Continuous checks for the RentReview site.
+#
+# Lives inside the frontend repo because `backend/` and `frontend/` are separate
+# repositories — a workflow in a parent folder is not in any repo and GitHub
+# never sees it.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # The real check: a build failure here is usually a bad import or a
+      # syntax error that never surfaced in dev.
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: https://api.rentreview.in/api
+          VITE_SITE_URL: https://rentreview.in
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high

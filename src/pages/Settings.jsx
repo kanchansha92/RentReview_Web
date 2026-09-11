@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import Footer from '../components/Footer';
-import { getCurrentUser, getMe, updateUserProfile, changePassword } from '../services/authService';
-import { updateUser, loginSuccess } from '../store/authSlice';
+import { getCurrentUser, getMe, updateUserProfile, changePassword, exportMyData, deleteMyAccount } from '../services/authService';
+import { setCsrfToken } from '../config/api';
+import { updateUser, logoutSuccess } from '../store/authSlice';
 import {
   User,
   Settings as SettingsIcon,
@@ -20,7 +21,9 @@ import {
   Eye,
   EyeOff,
   CloudLightning,
-  MessageSquare
+  MessageSquare,
+  Download,
+  AlertTriangle
 } from 'lucide-react';
 import ReviewNavbar from '../components/ReviewNavbar';
 import useSeo from '../hooks/useSeo';
@@ -51,6 +54,15 @@ const Settings = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
 
   // Notification Toggles
+  // ── Your data: export + delete ─────────────────────────────────────────
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
   const [notifications, setNotifications] = useState({
     reviewAlerts: true,
     marketing: false,
@@ -138,10 +150,12 @@ const Settings = () => {
         newPassword: passwordForm.newPassword
       });
       if (result.success) {
-    
-        const freshUser = result.user || user || getCurrentUser();
-        if (result.token && freshUser) {
-          dispatch(loginSuccess({ token: result.token, user: freshUser }));
+        // Changing the password rotates the session, and the rotation issues a
+        // new CSRF token without adopting it, the next write 403s.
+        setCsrfToken(result.csrfToken);
+        if (result.user) {
+          setUser(result.user);
+          dispatch(updateUser(result.user));
         }
         alert("Password changed successfully!");
         setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -152,6 +166,68 @@ const Settings = () => {
       alert("Error: " + error.message);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // Social-only accounts have no password to confirm with; they only type
+  // DELETE. `hasPassword` comes from GET /auth/me; when unknown, show the field
+  // (the server ignores it for social accounts).
+  const hasPassword = user?.hasPassword !== false;
+
+  const handleExportData = async () => {
+    setExporting(true);
+    setExportError('');
+    try {
+      const data = await exportMyData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rentreview-data-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      // Give the download a tick to start before the URL is revoked.
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setExportError(error.message || "We couldn't prepare your export. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const openDeleteDialog = () => {
+    setDeletePassword('');
+    setDeleteConfirmation('');
+    setDeleteError('');
+    setDeleteOpen(true);
+  };
+
+  const handleDeleteAccount = async (e) => {
+    e.preventDefault();
+    setDeleteError('');
+
+    if (deleteConfirmation !== 'DELETE') {
+      setDeleteError('Type DELETE (in capitals) to confirm.');
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const result = await deleteMyAccount({
+        password: deletePassword || undefined,
+        confirmation: deleteConfirmation,
+      });
+      if (result.success) {
+        dispatch(logoutSuccess());
+        navigate('/', { replace: true });
+      } else {
+        setDeleteError(result.message || "We couldn't delete your account. Please try again.");
+      }
+    } catch (error) {
+      setDeleteError(error.message || "We couldn't delete your account. Please try again.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -228,7 +304,11 @@ const Settings = () => {
               <div className="bg-rose-50 p-8 rounded-[40px] border border-rose-100">
                 <h4 className="font-black text-rose-600 mb-2">Danger Zone</h4>
                 <p className="text-xs font-bold text-rose-400 mb-6 leading-relaxed">Deleting your account is permanent. All your reviews and data will be removed.</p>
-                <button className="w-full py-4 bg-white text-rose-600 font-black rounded-2xl border border-rose-200 hover:bg-rose-600 hover:text-white transition-all shadow-sm">
+                <button
+                  type="button"
+                  onClick={openDeleteDialog}
+                  className="w-full py-4 bg-white text-rose-600 font-black rounded-2xl border border-rose-200 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                >
                   Delete Account
                 </button>
               </div>
@@ -475,43 +555,74 @@ const Settings = () => {
                   className="space-y-12"
                 >
                   <div className="space-y-2">
-                    <h2 className="text-4xl font-black text-[#0F172A] tracking-tight">Privacy Settings</h2>
-                    <p className="text-[#64748B] font-bold">Control your data and how your information is shared.</p>
+                    <h2 className="text-4xl font-black text-[#0F172A] tracking-tight">Privacy & Your Data</h2>
+                    <p className="text-[#64748B] font-bold">See what we hold about you, take a copy, or erase it.</p>
                   </div>
 
                   <div className="space-y-8">
-                    <div className="p-10 bg-slate-50 rounded-[48px] border border-slate-100 flex items-start gap-8">
+                    <div className="p-10 bg-slate-50 rounded-[48px] border border-slate-100 flex flex-col md:flex-row items-start gap-8">
                       <div className="w-16 h-16 bg-white rounded-[24px] flex items-center justify-center text-[#3EB489] shadow-inner shrink-0">
-                        <EyeOff size={32} />
+                        <Download size={32} />
                       </div>
-                      <div className="space-y-4">
-                        <h4 className="text-xl font-black text-[#0F172A]">Anonymous Profile</h4>
-                        <p className="text-[#64748B] font-medium leading-relaxed">When enabled, your real name and avatar will be hidden from other users. Your reviews will be displayed as "Anonymous Renter".</p>
-                        <button className="px-8 py-3 bg-[#3EB489] text-white font-black rounded-2xl shadow-lg shadow-emerald-100 hover:bg-[#35a37b] transition-all">
-                          Enable Anonymity
+                      <div className="space-y-4 flex-1">
+                        <h4 className="text-xl font-black text-[#0F172A]">Download your data</h4>
+                        <p className="text-[#64748B] font-medium leading-relaxed">
+                          A JSON file with your account details and every review you have written.
+                          Government ID details are never included they are encrypted while a
+                          verification is pending and destroyed once it is decided.
+                        </p>
+                        {exportError && (
+                          <p className="text-sm font-bold text-rose-600" role="alert">{exportError}</p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleExportData}
+                          disabled={exporting}
+                          className="px-8 py-3 bg-[#3EB489] text-white font-black rounded-2xl shadow-lg shadow-emerald-100 hover:bg-[#35a37b] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {exporting ? 'Preparing…' : 'Download my data'}
                         </button>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="p-8 bg-white rounded-[40px] border border-slate-100 space-y-4">
-                        <h4 className="font-black text-[#0F172A]">Account Visibility</h4>
-                        <p className="text-xs font-bold text-[#64748B] leading-relaxed">Choose who can find your profile via search engines or internal directory.</p>
-                        <select className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 font-bold focus:outline-none">
-                          <option>Everyone</option>
-                          <option>Registered Users Only</option>
-                          <option>Only Me</option>
-                        </select>
+                        <h4 className="font-black text-[#0F172A]">What is public</h4>
+                        <p className="text-xs font-bold text-[#64748B] leading-relaxed">
+                          The name you enter on a review, its rating, text and photos are visible to
+                          everyone. Your email address and sign-in details are never shown.
+                        </p>
                       </div>
                       <div className="p-8 bg-white rounded-[40px] border border-slate-100 space-y-4">
-                        <h4 className="font-black text-[#0F172A]">Data Usage</h4>
-                        <p className="text-xs font-bold text-[#64748B] leading-relaxed">Allow RentReview to use your anonymized data for market research reports.</p>
-                        <div className="flex items-center gap-4 pt-2">
-                          <input type="checkbox" defaultChecked className="w-5 h-5 accent-[#3EB489]" />
-                          <span className="text-sm font-black text-slate-700">Allow analytics usage</span>
-                        </div>
+                        <h4 className="font-black text-[#0F172A]">Identity verification</h4>
+                        <p className="text-xs font-bold text-[#64748B] leading-relaxed">
+                          ID documents are stored privately, seen only by our verification team, and
+                          deleted as soon as a decision is made or automatically after 30 days.
+                          Only the last four characters of the ID number are kept.
+                        </p>
                       </div>
                     </div>
+
+                    <div className="p-8 bg-rose-50 rounded-[40px] border border-rose-100 flex flex-col md:flex-row md:items-center gap-6">
+                      <div className="flex-1 space-y-2">
+                        <h4 className="font-black text-rose-600">Delete your account</h4>
+                        <p className="text-xs font-bold text-rose-400 leading-relaxed">
+                          Removes your account, every review you wrote, their photos and any pending ID
+                          verification. This cannot be undone.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={openDeleteDialog}
+                        className="px-8 py-3 bg-white text-rose-600 font-black rounded-2xl border border-rose-200 hover:bg-rose-600 hover:text-white transition-all shadow-sm shrink-0"
+                      >
+                        Delete Account
+                      </button>
+                    </div>
+
+                    <p className="text-xs font-bold text-[#94A3B8]">
+                      Full details in our <a href="/privacy" className="text-[#3EB489] underline">Privacy Policy</a>.
+                    </p>
                   </div>
                 </motion.div>
               )}
@@ -521,6 +632,98 @@ const Settings = () => {
           </div>
         </div>
       </main>
+
+      {/* ── Delete-account confirmation ─────────────────────────────────── */}
+      <AnimatePresence>
+        {deleteOpen && (
+          <motion.div
+            key="delete-dialog"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+            onClick={() => !deleting && setDeleteOpen(false)}
+          >
+            <motion.form
+              onSubmit={handleDeleteAccount}
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, y: 24, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: EASE }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-account-title"
+              className="w-full max-w-lg bg-white rounded-[40px] p-10 shadow-2xl space-y-6"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={24} />
+                </div>
+                <div className="space-y-1">
+                  <h3 id="delete-account-title" className="text-2xl font-black text-[#0F172A]">Delete your account?</h3>
+                  <p className="text-sm font-bold text-[#64748B] leading-relaxed">
+                    This permanently removes your account and every review you have written. There is no undo.
+                  </p>
+                </div>
+              </div>
+
+              {hasPassword && (
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-[#64748B] uppercase tracking-wider" htmlFor="delete-password">
+                    Your password
+                  </label>
+                  <input
+                    id="delete-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-rose-200"
+                    placeholder="Leave blank if you sign in with Google or Facebook"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-[#64748B] uppercase tracking-wider" htmlFor="delete-confirm">
+                  Type <span className="text-rose-600">DELETE</span> to confirm
+                </label>
+                <input
+                  id="delete-confirm"
+                  type="text"
+                  autoComplete="off"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-rose-200"
+                />
+              </div>
+
+              {deleteError && (
+                <p className="text-sm font-bold text-rose-600" role="alert">{deleteError}</p>
+              )}
+
+              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-2">
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setDeleteOpen(false)}
+                  className="px-6 py-3 rounded-2xl font-black text-[#64748B] hover:bg-slate-50 transition-colors"
+                >
+                  Keep my account
+                </button>
+                <button
+                  type="submit"
+                  disabled={deleting || deleteConfirmation !== 'DELETE'}
+                  className="px-6 py-3 rounded-2xl font-black bg-rose-600 text-white hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleting ? 'Deleting…' : 'Delete permanently'}
+                </button>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Footer />
     </div>

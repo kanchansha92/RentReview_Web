@@ -3,9 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   Home, ArrowRight, ChevronDown, LogOut, FileText,
-  User as UserIcon, Menu, X,
+  User as UserIcon, Settings as SettingsIcon, Menu, X,
 } from 'lucide-react'
 import { logoutSuccess, loginSuccess, selectUser } from '../store/authSlice'
+import { logout } from '../services/authService'
 import { clearReviewData } from '../store/reviewSlice'
 import LoginModal from './LoginModal'
 import SignupModal from './SignupModal'
@@ -84,7 +85,10 @@ const Navbar = () => {
   }
 
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // The session cookie is HttpOnly, so only the server can clear it. Do that
+    // FIRST: without it the UI says "signed out" while the session stays live.
+    await logout()
     dispatch(logoutSuccess())
     // The review slice also resets on logoutSuccess, but dispatch this
     // explicitly so the intent is obvious: User A's reviews must never
@@ -101,14 +105,14 @@ const Navbar = () => {
     else openLogin()
   }
 
-  const handleLoginSuccess = (loggedInUser, token) => {
-    dispatch(loginSuccess({ user: loggedInUser, token }))
+  const handleLoginSuccess = (loggedInUser) => {
+    dispatch(loginSuccess({ user: loggedInUser }))
     closeAllAuth()
     navigate('/write-review')
   }
 
-  const handleSignupSuccess = (registeredUser, token) => {
-    dispatch(loginSuccess({ user: registeredUser, token }))
+  const handleSignupSuccess = (registeredUser) => {
+    dispatch(loginSuccess({ user: registeredUser }))
     closeAllAuth()
     navigate('/write-review')
   }
@@ -223,6 +227,14 @@ const Navbar = () => {
                     >
                       <UserIcon size={16} className="text-slate-400" />
                       Profile
+                    </Link>
+                    <Link
+                      to="/settings"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-[#3EB489]"
+                    >
+                      <SettingsIcon size={16} className="text-slate-400" />
+                      Settings
                     </Link>
                     <Link
                       to="/my-reviews"

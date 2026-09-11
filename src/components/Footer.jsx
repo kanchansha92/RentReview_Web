@@ -14,6 +14,8 @@ const platformLinks = [
 const companyLinks = [
   { id: 'footer-about-us', label: 'About Us', to: '/about' },
   { id: 'footer-privacy-policy', label: 'Privacy Policy', to: '/privacy' },
+  // { id: 'footer-cookie-policy', label: 'Cookies', to: '/cookies' },
+  { id: 'footer-security', label: 'Security', to: '/security' },
   { id: 'footer-terms-of-service', label: 'Terms of Service', to: '/terms' },
 ];
 
@@ -21,6 +23,9 @@ const supportLinks = [
   { id: 'footer-help-center', label: 'Help Center', to: '/help' },
   { id: 'footer-contact-us', label: 'Contact Us', to: '/contact' },
   { id: 'footer-community-guidelines', label: 'Community Guidelines', to: '/guidelines' },
+  // Required to be published under IT Rules 2021 r.3(2) must stay reachable
+  // from every page, which in practice means the footer.
+  { id: 'footer-grievance', label: 'Complaints', to: '/grievance' },
 ];
 
 const LINK_CLASS =

@@ -24,8 +24,13 @@ const STATIC_PAGES = [
     { loc: '/help', changefreq: 'monthly', priority: '0.5' },
     { loc: '/contact', changefreq: 'monthly', priority: '0.5' },
     { loc: '/privacy', changefreq: 'yearly', priority: '0.3' },
+    { loc: '/cookies', changefreq: 'yearly', priority: '0.3' },
+    { loc: '/security', changefreq: 'yearly', priority: '0.3' },
+    // Higher than the other legal pages on purpose: someone searching for how
+    // to complain about a review written about them needs to find this, and
+    // publishing it is a regulatory obligation rather than a nicety.
+    { loc: '/grievance', changefreq: 'yearly', priority: '0.5' },
     { loc: '/terms', changefreq: 'yearly', priority: '0.3' },
-   
 ];
 
 const xmlEscape = (s) =>

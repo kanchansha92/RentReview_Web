@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { Mail, Lock, Eye, EyeOff, X, Home, User, Check, Loader2 } from 'lucide-react';
-import { BASE_URL } from '../constants';
+import { API_BASE_URL, apiFetch, setCsrfToken } from '../config/api';
 import { loginSuccess } from '../store/authSlice';
 import useSeo from '../hooks/useSeo';
 import {
@@ -68,10 +68,9 @@ const SignUp = () => {
 
         setLoading(true);
         try {
-            const res = await fetch(`${BASE_URL}/auth/register`, {
+            const res = await apiFetch('/auth/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+                body: ({
                     name: form.name.trim(),
                     email: form.email.trim(),
                     password: form.password,
@@ -92,8 +91,9 @@ const SignUp = () => {
             }
 
           
-            if (data.token) {
-                dispatch(loginSuccess({ token: data.token, user: data.user }));
+            setCsrfToken(data.csrfToken);
+            if (data.user) {
+                dispatch(loginSuccess({ user: data.user }));
                 navigate('/');
             } else {
                 navigate('/signin');
@@ -106,11 +106,11 @@ const SignUp = () => {
     };
 
     const handleGoogleLogin = () => {
-        window.location.href = `${BASE_URL}/auth/google`;
+        window.location.href = `${API_BASE_URL}/auth/google`;
     };
 
     const handleFacebookLogin = () => {
-        window.location.href = `${BASE_URL}/auth/facebook`;
+        window.location.href = `${API_BASE_URL}/auth/facebook`;
     };
 
     return (

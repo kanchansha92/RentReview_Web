@@ -1,38 +1,11 @@
-import { API_BASE_URL, STORAGE_KEYS, handleUnauthorized } from '../config/api';
+import { apiFetch, apiJson, handleUnauthorized } from '../config/api';
 
-// Pull the JWT saved by authService
-const getToken = () => localStorage.getItem(STORAGE_KEYS.TOKEN);
-
-// JSON request helper (for reads + update/delete)
-const jsonRequest = async (endpoint, { method = 'GET', body, auth = false } = {}) => {
-    const headers = { 'Content-Type': 'application/json' };
-    if (auth) {
-        const token = getToken();
-        if (token) headers.Authorization = `Bearer ${token}`;
-    }
-
-    let res;
-    try {
-        res = await fetch(`${API_BASE_URL}${endpoint}`, {
-            method,
-            headers,
-            body: body ? JSON.stringify(body) : undefined,
-        });
-    } catch {
-        throw new Error('Unable to connect to the server. Please try again.');
-    }
-
-    // Expired / revoked token -drop the stale credentials and send them to sign-in
-    // instead of letting every subsequent request fail silently forever.
-    if (res.status === 401) {
-        handleUnauthorized();
-        throw new Error('Your session has expired. Please sign in again.');
-    }
-
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || 'Something went wrong.');
-    return data;
-};
+// Every call goes through apiFetch/apiJson, which attach the session cookie and
+// the CSRF header. There is no token to read here any more `auth: true` used
+// to mean "add the Authorization header"; the cookie now travels on every
+// request, so authenticated and public calls look identical from this side.
+const jsonRequest = (endpoint, { method = 'GET', body } = {}) =>
+    apiJson(endpoint, { method, body });
 
 // ─── Create a review (multipart, because of the file uploads) ─────────────
 // `form` is the state object from AddReview.jsx
@@ -61,16 +34,10 @@ export const createReview = async (form) => {
     if (form.idFile) fd.append('idProof', form.idFile);
     (form.photos || []).forEach((file) => fd.append('photos', file));
 
-    const token = getToken();
-
     let res;
     try {
-        res = await fetch(`${API_BASE_URL}/reviews`, {
-            method: 'POST',
-            // NOTE: do NOT set Content-Type -the browser sets the multipart boundary
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-            body: fd,
-        });
+        // NOTE: no Content-Type the browser sets the multipart boundary.
+        res = await apiFetch('/reviews', { method: 'POST', body: fd });
     } catch {
         throw new Error('Unable to connect to the server. Please try again.');
     }
@@ -96,14 +63,14 @@ export const getReview = (id) => jsonRequest(`/reviews/${id}`);
 export const getPropertyReviews = (propertyId) =>
     jsonRequest(`/reviews/property/${propertyId}`);
 
-export const getMyReviews = () => jsonRequest('/reviews/me', { auth: true });
+export const getMyReviews = () => jsonRequest('/reviews/me');
 
 // ─── Update / delete own review ─────────────────────────────────────────────
 export const updateReview = (id, changes) =>
-    jsonRequest(`/reviews/${id}`, { method: 'PUT', body: changes, auth: true });
+    jsonRequest(`/reviews/${id}`, { method: 'PUT', body: changes });
 
 export const deleteReview = (id) =>
-    jsonRequest(`/reviews/${id}`, { method: 'DELETE', auth: true });
+    jsonRequest(`/reviews/${id}`, { method: 'DELETE' });
 
 // ─── Properties (for WriteReview list + MapView) ────────────────────────────
 export const getProperties = (params = {}) => {
@@ -116,7 +83,7 @@ export const getProperty = (id) => jsonRequest(`/properties/${id}`);
 
 export const getPendingVerifications = (params = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return jsonRequest(`/reviews/admin/pending-verifications${qs ? `?${qs}` : ''}`, { auth: true });
+    return jsonRequest(`/reviews/admin/pending-verifications${qs ? `?${qs}` : ''}`);
 };
 
 /**
@@ -130,5 +97,4 @@ export const decideVerification = (id, decision) =>
     jsonRequest(`/reviews/admin/${id}/verification`, {
         method: 'PUT',
         body: { decision },
-        auth: true,
     });

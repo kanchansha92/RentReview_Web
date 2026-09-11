@@ -55,6 +55,21 @@ const reviewSlice = createSlice({
             const idToRemove = action.payload;
             state.myReviews = state.myReviews.filter((r) => r._id !== idToRemove);
         },
+        // Fold a saved edit back into the list without a refetch.
+        //
+        // MERGED, not replaced: PUT /api/reviews/:id answers with the raw
+        // document, and `property` on it is an unpopulated ObjectId. Assigning
+        // that over the populated entry would blank the property title, address
+        // and image on the card the user is looking at, and break the "Explore
+        // Property" link for a request that succeeded.
+        updateMyReview(state, action) {
+            const updated = action.payload;
+            if (!updated?._id) return;
+            const index = state.myReviews.findIndex((r) => r._id === updated._id);
+            if (index === -1) return;
+            const { property, ...rest } = updated;
+            state.myReviews[index] = { ...state.myReviews[index], ...rest };
+        },
         clearReviewData(state) {
             state.myReviews = [];
             state.properties = [];
@@ -72,7 +87,7 @@ const reviewSlice = createSlice({
     extraReducers: (builder) => {
         builder
             // Handle fetchMyReviews
-            // NOTE: `error` is cleared on pending AND fulfilled — a stale string
+            // NOTE: `error` is cleared on pending AND fulfilled a stale string
             // otherwise keeps rendering an error state over healthy data.
             .addCase(fetchMyReviews.pending, (state) => {
                 state.status = 'loading';
@@ -110,7 +125,7 @@ const reviewSlice = createSlice({
     },
 });
 
-export const { removeMyReview, clearReviewData, invalidateProperties } = reviewSlice.actions;
+export const { removeMyReview, updateMyReview, clearReviewData, invalidateProperties } = reviewSlice.actions;
 
 // Selectors
 export const selectMyReviews = (state) => state.review.myReviews;
@@ -120,7 +135,7 @@ export const selectMyReviewsError = (state) => state.review.error;
 export const selectProperties = (state) => state.review.properties;
 export const selectPropertiesStatus = (state) => state.review.propertiesStatus;
 export const selectPropertiesError = (state) => state.review.propertiesError;
-// Server-side match count — null when the backend didn't report one.
+// Server-side match count null when the backend didn't report one.
 export const selectPropertiesTotal = (state) => state.review.propertiesTotal;
 export const selectPropertiesTotalPages = (state) => state.review.propertiesTotalPages;
 

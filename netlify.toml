@@ -24,3 +24,60 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Security headers for the site itself. The API sets its own (see
+# backend/src/middleware/securityHeaders.js); these cover the pages Netlify
+# serves, which is where an injected script would actually run.
+# ─────────────────────────────────────────────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Browsers never sniff a response into a different type.
+    X-Content-Type-Options = "nosniff"
+    # Nothing on this site is meant to be framed (clickjacking).
+    X-Frame-Options = "DENY"
+    # Send only the origin (not the full path) to other sites, and nothing at
+    # all on a downgrade to HTTP. Paths here can carry reset/confirm tokens.
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Two years, subdomains included, preload-eligible.
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    # Features this site does not use. Geolocation is off deliberately: the map
+    # centres on a searched address, never on the visitor's own position.
+    Permissions-Policy = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()"
+    # OAuth popups (if ever used) still work; everything else is isolated.
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+
+    # ── Content Security Policy ──────────────────────────────────────────────
+    # ENFORCED. A report-only policy stops nothing, so this is the header that
+    # does the work: an injected script from anywhere not listed below simply
+    # does not execute.
+    #
+    # If something legitimate breaks after a deploy, the browser console names
+    # the blocked host — add it to the right directive rather than weakening the
+    # policy wholesale. To debug without breaking the site, temporarily rename
+    # this key to `Content-Security-Policy-Report-Only`, reproduce, then put it
+    # back.
+    #
+    # What each source is for:
+    #   script-src   self + the inline snippets @vitejs/plugin-legacy injects
+    #                + AdSense. The four hashes are the plugin's own
+    #                `cspHashes` export and change with its version — after
+    #                upgrading it, re-check with:
+    #                node -e "console.log(require('@vitejs/plugin-legacy').cspHashes)"
+    #   style-src    'unsafe-inline' is unavoidable: Tailwind v4 and the motion
+    #                library write inline style attributes.
+    #   img-src      Cloudinary (review photos), OpenStreetMap tiles (map),
+    #                ui-avatars (Settings avatar), data:/blob: (upload previews),
+    #                AdSense image hosts.
+    #   connect-src  the API (autocomplete/geocode are proxied through it), and
+    #                the hosts AdSense's own script talks to.
+    #   frame-src    AdSense renders ads in iframes; nothing else is framed.
+    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests; script-src 'self' 'sha256-MS6/3FCg4WjP9gwgaBGwLpRCY6fZBgwmhVCdrPrNf3E=' 'sha256-tQjf8gvb2ROOMapIxFvFAYBeUJ0v1HCbOcSmDNXGtDo=' 'sha256-w36slEqa9euNKxfvkw+LLGsDIr++3rsZXpZxtmRh8Aw=' 'sha256-+5XkZFazzJo8n0iOP4ti/cLCMUudTf//Mzkb7xNPXIc=' https://pagead2.googlesyndication.com https://tpc.googlesyndication.com https://www.googletagservices.com https://*.adtrafficquality.google; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com https://*.tile.openstreetmap.org https://ui-avatars.com https://*.googlesyndication.com https://*.google.com https://*.googleusercontent.com https://*.doubleclick.net https://*.adtrafficquality.google; connect-src 'self' https://api.rentreview.in https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net https://*.adtrafficquality.google; frame-src https://*.googlesyndication.com https://*.doubleclick.net https://*.google.com https://*.adtrafficquality.google; worker-src 'self' blob:; manifest-src 'self'"
+
+# Hashed build assets are immutable — cache them hard. index.html is not
+# matched here, so a new deploy is picked up on the next navigation.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

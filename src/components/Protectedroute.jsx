@@ -128,8 +128,8 @@ const ProtectedRoute = ({ children }) => {
                         setShowLogin(false)
                         setShowSignup(true)
                     }}
-                    onSuccess={(loggedInUser, token) => {
-                        dispatch(loginSuccess({ user: loggedInUser, token }))
+                    onSuccess={(loggedInUser) => {
+                        dispatch(loginSuccess({ user: loggedInUser }))
                         setShowLogin(false)
                         // Component re-renders -protected page renders next tick
                     }}
@@ -142,8 +142,8 @@ const ProtectedRoute = ({ children }) => {
                         setShowSignup(false)
                         setShowLogin(true)
                     }}
-                    onSuccess={(registeredUser, token) => {
-                        dispatch(loginSuccess({ user: registeredUser, token }))
+                    onSuccess={(registeredUser) => {
+                        dispatch(loginSuccess({ user: registeredUser }))
                         setShowSignup(false)
                     }}
                 />

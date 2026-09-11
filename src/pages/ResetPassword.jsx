@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Home, Loader2, CheckCircle2 } from 'lucide-react';
-import { BASE_URL } from '../constants';
+import { apiFetch } from '../config/api';
 import useSeo from '../hooks/useSeo';
 import { motion } from '../animations';
 
@@ -27,10 +27,9 @@ const ResetPassword = () => {
 
         setLoading(true);
         try {
-            const res = await fetch(`${BASE_URL}/auth/reset-password/${token}`, {
+            const res = await apiFetch(`/auth/reset-password/${encodeURIComponent(token)}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password }),
+                body: { password },
             });
            
             const data = await res.json().catch(() => ({}));
