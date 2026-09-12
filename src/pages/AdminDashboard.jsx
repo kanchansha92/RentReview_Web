@@ -12,6 +12,7 @@ import {
     Loader2,
     UserCog,
     Flag,
+    Search,
 } from 'lucide-react';
 import ReviewNavbar from '../components/ReviewNavbar';
 import { getPendingVerifications, getReviews, getProperties } from '../services/reviewService';
@@ -36,7 +37,7 @@ const STAT_CARDS = [
         key: 'reviews',
         label: 'Reviews published',
         icon: FileText,
-        to: '/write-review',
+        to: '/admin/reviews',
         hint: 'Every review currently live on the site',
     },
     {
@@ -64,11 +65,18 @@ const TOOLS = [
             'Approve or reject the ID proofs the OCR check left undecided. Both decisions permanently delete the document and mask the stored number.',
     },
     {
-        to: '/write-review',
+        to: '/admin/reviews',
         icon: FileText,
-        title: 'Browse all reviews',
+        title: 'All reviews',
         body:
-            'The public browse grid - the fastest way to spot a review that needs moderating. Editing and removal still happen from the review itself.',
+            'Every review including the hidden ones, searchable by address, reviewer or wording, each with a delete. Deleting is permanent - photos and ID proof go with it - so hide from Reported reviews when it may need undoing.',
+    },
+    {
+        to: '/write-review',
+        icon: Search,
+        title: 'Public browse grid',
+        body:
+            'The site as a visitor sees it. Useful for checking how a property reads once its reviews are live; hidden reviews do not appear here.',
     },
     {
         to: '/map',

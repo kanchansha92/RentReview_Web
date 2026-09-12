@@ -20,7 +20,7 @@
 
 // Trailing slashes are stripped so `${API_BASE_URL}/auth/me` never doubles up.
 export const API_BASE_URL = (
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+    import.meta.env.VITE_API_BASE_URL || 'https://rentreview-server-5.onrender.com/api'
 ).replace(/\/+$/, '');
 
 export const STORAGE_KEYS = {

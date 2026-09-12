@@ -48,7 +48,17 @@ export const createReview = async (form) => {
     }
 
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || 'Something went wrong.');
+    if (!res.ok) {
+        const err = new Error(data.message || 'Something went wrong.');
+        // The ID check rejects with a 422 and a code. Carried through so the form
+        // can pin the message to the ID fields instead of showing a bare banner.
+        err.code = data.code || '';
+        err.reason = data.reason || '';
+        // Present outside production only: what OCR read off the ID document.
+        err.debug = data.debug || null;
+        err.status = res.status;
+        throw err;
+    }
     return data;
 };
 
@@ -59,6 +69,15 @@ export const getReviews = (params = {}) => {
 };
 
 export const getReview = (id) => jsonRequest(`/reviews/${id}`);
+
+/**
+ * Admin moderation list: every review, hidden ones included, newest first.
+ * @param {{page?:number, limit?:number, q?:string, status?:'all'|'visible'|'hidden'}} params
+ */
+export const getAllReviewsAdmin = (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return jsonRequest(`/reviews/admin/all${qs ? `?${qs}` : ''}`);
+};
 
 export const getPropertyReviews = (propertyId) =>
     jsonRequest(`/reviews/property/${propertyId}`);

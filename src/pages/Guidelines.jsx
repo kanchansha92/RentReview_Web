@@ -237,7 +237,8 @@ const Guidelines = () => (
                 rows={[
                     ['Say which rule it breaks', 'A report that points at a specific line is dealt with quickly. "I disagree with this" is not something we can act on.'],
                     ['How fast', `${GRIEVANCE_OFFICER.acknowledgeHours} hours to acknowledge your report, ${GRIEVANCE_OFFICER.resolveDays} days to resolve it.`],
-                    ['If we agree', 'The review is hidden rather than deleted. It disappears from the site, the writer still sees it in My Reviews, and it can be put back.'],
+                    ['If we agree', 'Usually the review is hidden rather than deleted. It disappears from the site, the writer still sees it in My Reviews, and it can be put back if the decision turns out to be wrong.'],
+                    ['If it has to go entirely', 'Where the content must not continue to exist — personal information, something unlawful, or an erasure request we are obliged to honour — the review is deleted outright, along with its photos. That is permanent and cannot be reversed.'],
                     ['If we do not', 'The review stays up and we tell you why.'],
                 ]}
             />

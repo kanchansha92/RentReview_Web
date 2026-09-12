@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
     Flag, ArrowLeft, Loader2, AlertCircle, EyeOff, Eye,
-    MessageSquareQuote, ShieldCheck, Clock,
+    MessageSquareQuote, ShieldCheck, Clock, Trash2,
 } from 'lucide-react';
 import ReviewNavbar from '../components/ReviewNavbar';
 import Footer from '../components/Footer';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { getReports, decideReport, restoreReview } from '../services/reportService';
 import { selectUser } from '../store/authSlice';
 import useSeo from '../hooks/useSeo';
@@ -33,7 +34,11 @@ const OUTCOME_LABEL = {
     'review-hidden': 'Review hidden',
     'reply-published': 'Response published',
     'both': 'Response published, review hidden',
+    'review-deleted': 'Review deleted permanently',
 };
+
+// The one outcome that cannot be undone, so it is the one that asks twice.
+const DESTRUCTIVE = 'review-deleted';
 
 const fmtDate = (value) => {
     try {
@@ -66,6 +71,12 @@ const AdminReports = () => {
     const [error, setError] = useState('');
     const [notice, setNotice] = useState('');
     const [busyId, setBusyId] = useState(null);
+
+    // Id of the report whose permanent deletion is awaiting confirmation, and any
+    // error from that attempt  shown inside the dialog rather than behind it, so
+    // a failed delete doesn't look like a silent one.
+    const [confirmId, setConfirmId] = useState(null);
+    const [confirmError, setConfirmError] = useState('');
 
     // Per-report editor state: the outcome chosen, the note, and the reply text
     // (pre-filled with whatever was submitted, so trimming it is the easy path).
@@ -102,27 +113,58 @@ const AdminReports = () => {
     const setDraft = (id, key, value) =>
         setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [key]: value } }));
 
-    const handleDecide = async (report) => {
+    const handleDecide = async (report, { fromDialog = false } = {}) => {
         const draft = drafts[report._id] || {};
         if (!draft.outcome) {
             setNotice('Choose what to do before resolving.');
             return;
         }
         setBusyId(report._id);
-        setNotice('');
+        if (!fromDialog) setNotice('');
         try {
             await decideReport(report._id, {
                 outcome: draft.outcome,
                 note: draft.note,
                 replyText: draft.replyText,
             });
+            setConfirmId(null);
+            setConfirmError('');
             setNotice(`Resolved ${OUTCOME_LABEL[draft.outcome]}. The reporter has been emailed.`);
             setRows((prev) => prev.filter((r) => r._id !== report._id));
         } catch (err) {
-            setNotice(err.message || 'Could not resolve that report.');
+            const message = err.message || 'Could not resolve that report.';
+            // Keep the dialog open on failure: nothing was deleted, and the
+            // reason belongs next to the button that failed.
+            if (fromDialog) setConfirmError(message);
+            else setNotice(message);
         } finally {
             setBusyId(null);
         }
+    };
+
+    /**
+     * The gesture on the button. Everything reversible goes straight through;
+     * permanent deletion routes via the dialog first, because the server cannot
+     * give this one back and the review is gone as evidence with it.
+     */
+    const requestDecide = (report) => {
+        const draft = drafts[report._id] || {};
+        if (!draft.outcome) {
+            setNotice('Choose what to do before resolving.');
+            return;
+        }
+        if (draft.outcome === DESTRUCTIVE) {
+            // Checked here as well as on the server, so nobody is told to write a
+            // note only after they have confirmed the irreversible part.
+            if (!(draft.note || '').trim()) {
+                setNotice('A permanent deletion needs a note saying why  it is the only record left afterwards.');
+                return;
+            }
+            setConfirmError('');
+            setConfirmId(report._id);
+            return;
+        }
+        handleDecide(report);
     };
 
     const handleRestore = async (reviewId) => {
@@ -178,7 +220,9 @@ const AdminReports = () => {
                             Complaints about published reviews. Every one was acknowledged by email when it
                             arrived and needs an outcome within <strong>15 days</strong>. Hiding a review takes
                             it out of public view and out of the property&apos;s rating, but keeps the record —
-                            it can be restored.
+                            it can be restored. Deleting one is permanent: the review, its photos and the
+                            writer&apos;s ID proof are destroyed, so keep it for content that must stop
+                            existing rather than content that is merely wrong.
                         </p>
                     </header>
 
@@ -376,12 +420,41 @@ const AdminReports = () => {
                                                         {!reviewGone && (report.requestedReply || draft.replyText) && (
                                                             <option value="both">Publish response AND hide the review</option>
                                                         )}
+                                                        {!reviewGone && (
+                                                            <option value={DESTRUCTIVE}>
+                                                                Delete the review permanently cannot be undone
+                                                            </option>
+                                                        )}
                                                     </select>
                                                 </div>
 
+                                                {/* Said before the click, not only in the dialog: hiding is the
+                                                    right answer to almost every complaint, and an admin reaching
+                                                    for deletion should know what it costs first. */}
+                                                {draft.outcome === DESTRUCTIVE && (
+                                                    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                                                        <p className="flex items-center gap-1.5 text-sm font-bold text-rose-700">
+                                                            <Trash2 size={15} /> This cannot be undone
+                                                        </p>
+                                                        <p className="text-sm text-rose-700/90 mt-1.5 leading-relaxed">
+                                                            The review, its photos and the writer&apos;s ID proof are
+                                                            destroyed. There is no restore, and the property&apos;s
+                                                            rating is recalculated without it. Choose
+                                                            <strong> hide </strong> instead unless the content must
+                                                            stop existing personal information, illegal content, or
+                                                            an erasure request.
+                                                        </p>
+                                                    </div>
+                                                )}
+
                                                 <div className="space-y-1.5">
                                                     <label className="text-xs font-bold uppercase tracking-wider text-[#6A7282]">
-                                                        Note to the reporter <span className="font-normal normal-case">(optional, included in the email)</span>
+                                                        Note to the reporter{' '}
+                                                        <span className="font-normal normal-case">
+                                                            {draft.outcome === DESTRUCTIVE
+                                                                ? '(required the only record of why)'
+                                                                : '(optional, included in the email)'}
+                                                        </span>
                                                     </label>
                                                     <textarea
                                                         rows={2}
@@ -395,12 +468,20 @@ const AdminReports = () => {
 
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleDecide(report)}
+                                                    onClick={() => requestDecide(report)}
                                                     disabled={busy || !draft.outcome}
-                                                    className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#41B985] text-white text-sm font-bold hover:bg-[#35a37b] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+                                                    className={`w-full sm:w-auto px-6 py-3 rounded-xl text-white text-sm font-bold transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2 ${
+                                                        draft.outcome === DESTRUCTIVE
+                                                            ? 'bg-rose-500 hover:bg-rose-600'
+                                                            : 'bg-[#41B985] hover:bg-[#35a37b]'
+                                                    }`}
                                                 >
                                                     {busy && <Loader2 size={16} className="animate-spin" />}
-                                                    {busy ? 'Resolving…' : 'Resolve and email the reporter'}
+                                                    {busy
+                                                        ? 'Resolving…'
+                                                        : draft.outcome === DESTRUCTIVE
+                                                            ? 'Delete the review and email the reporter'
+                                                            : 'Resolve and email the reporter'}
                                                 </button>
                                             </div>
                                         )}
@@ -411,6 +492,33 @@ const AdminReports = () => {
                     )}
                 </div>
             </main>
+
+            {/* The second ask. Named so it is obvious which review is about to go:
+                the queue can show several, and the button that opened this is
+                scrolled out of view on a long complaint. */}
+            {confirmId && (() => {
+                const report = rows.find((r) => r._id === confirmId);
+                if (!report) return null;
+                return (
+                    <ConfirmDialog
+                        title="Delete this review permanently?"
+                        message={
+                            `“${report.review?.title || 'this review'}” by ${report.review?.reviewerName || 'its author'} `
+                            + 'will be erased, along with its photos and the ID proof behind it. '
+                            + 'It cannot be restored and the property’s rating will be recalculated without it. '
+                            + 'Hiding it instead keeps the record and can be undone.'
+                        }
+                        confirmLabel="Delete permanently"
+                        busyLabel="Deleting…"
+                        cancelLabel="Keep the review"
+                        tone="danger"
+                        busy={busyId === confirmId}
+                        error={confirmError}
+                        onConfirm={() => handleDecide(report, { fromDialog: true })}
+                        onClose={() => { setConfirmId(null); setConfirmError(''); }}
+                    />
+                );
+            })()}
 
             <Footer />
         </div>

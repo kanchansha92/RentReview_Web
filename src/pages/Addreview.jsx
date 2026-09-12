@@ -22,12 +22,36 @@ const PROPERTY_TYPES = ['House', 'Apartment', 'Condo', 'Other'];
 // Currency symbol shown on the Monthly Rent field. Change to '₹' for rupees.
 const CURRENCY = '$';
 
+// ── Aadhaar check digit (Verhoeff) ─────────────────────────────────────────
+// Mirrors the server rule in backend/src/middleware/validateReview.js. Twelve
+// digits is not enough on its own: every real Aadhaar number ends in a Verhoeff
+// check digit, so a mistyped one can be caught here instead of after the upload.
+const VERHOEFF_D = [
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 2, 3, 4, 0, 6, 7, 8, 9, 5],
+    [2, 3, 4, 0, 1, 7, 8, 9, 5, 6], [3, 4, 0, 1, 2, 8, 9, 5, 6, 7],
+    [4, 0, 1, 2, 3, 9, 5, 6, 7, 8], [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
+    [6, 5, 9, 8, 7, 1, 0, 4, 3, 2], [7, 6, 5, 9, 8, 2, 1, 0, 4, 3],
+    [8, 7, 6, 5, 9, 3, 2, 1, 0, 4], [9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+];
+const VERHOEFF_P = [
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
+    [5, 8, 0, 3, 7, 9, 6, 1, 4, 2], [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
+    [9, 4, 5, 3, 1, 2, 6, 8, 7, 0], [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
+    [2, 7, 9, 3, 8, 0, 6, 4, 1, 5], [7, 0, 4, 6, 9, 1, 3, 2, 5, 8],
+];
+const isValidAadhaar = (digits) => {
+    if (!/^\d{12}$/.test(digits)) return false;
+    if (digits[0] === '0' || digits[0] === '1') return false; // never issued
+    return digits.split('').reverse()
+        .reduce((c, d, i) => VERHOEFF_D[c][VERHOEFF_P[i % 8][Number(d)]], 0) === 0;
+};
+
 // ── Per-ID-type format rules ───────────────────────────────────────────────
 const ID_RULES = {
     'Aadhaar Card': {
         placeholder: '1234 5678 9012',
-        error: 'Aadhaar number must be exactly 12 digits.',
-        test: (v) => /^\d{12}$/.test(v.replace(/[\s-]/g, '')),
+        error: 'That is not a valid Aadhaar number. Please check the 12 digits.',
+        test: (v) => isValidAadhaar(v.replace(/[\s-]/g, '')),
     },
     'PAN Card': {
         placeholder: 'ABCDE1234F',
@@ -216,8 +240,24 @@ const AddReview = () => {
             dispatch(invalidateProperties());
             navigate('/write-review');
         } catch (err) {
-            setError(err.message);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            // The server reads the uploaded document and checks it really is the
+            // ID type selected, carrying the number that was typed. When that
+            // fails nothing is saved, so point at the fields the user has to fix
+            // rather than dropping a banner at the top of a long form.
+            if (err.code === 'ID_VERIFICATION_FAILED') {
+                // 'no-number' means the document was recognised but the typed
+                // number was not on it — that is the number field's problem.
+                fail(err.message, err.reason === 'no-number' ? 'idNumber' : 'idFile');
+            } else if (err.code === 'ID_VERIFICATION_UNAVAILABLE') {
+                // Our end could not read the document at all. Nothing was saved
+                // and nothing about their photo is necessarily wrong, so this is
+                // a banner asking them to retry, not a red field.
+                setError(err.message);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                setError(err.message);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         } finally {
             setSubmitting(false);
         }
@@ -753,6 +793,13 @@ const AddReview = () => {
                                     </span>
                                     <span className="text-[10px] sm:text-xs font-medium text-[#6A7282]">PNG, JPG, or PDF up to 10MB</span>
                                 </label>
+                                {/* The document is read on the server and has to match both the
+                                    type and the number above, so say what a usable photo looks
+                                    like before it is uploaded, not after it comes back rejected.
+                                    Outside the drop zone: that box has a fixed height. */}
+                                <span className="text-[10px] sm:text-xs text-[#6A7282]">
+                                    The whole document must be visible and in focus, with the number readable.
+                                </span>
                                 {fieldErrors.idFile && (
                                     <span className="text-xs text-red-600">{fieldErrors.idFile}</span>
                                 )}
@@ -835,7 +882,10 @@ const AddReview = () => {
                                 disabled={submitting}
                                 className="flex h-11 sm:flex-1 items-center justify-center gap-2 rounded-lg bg-[#41B985] px-6 text-sm font-semibold text-white shadow-md shadow-emerald-100 transition-all hover:bg-[#36a374] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
                             >
-                                {submitting ? 'Submitting…' : 'Submit Review'}
+                                {/* The ID document is read server-side before anything is
+                                    saved, which takes a few seconds — say so, otherwise the
+                                    wait looks like the form has hung. */}
+                                {submitting ? 'Checking your ID…' : 'Submit Review'}
                             </button>
                         </div>
                     </motion.div>

@@ -37,6 +37,7 @@ const ConfirmEmailChange = lazy(() => import('./pages/ConfirmEmailChange'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const AdminVerifications = lazy(() => import('./pages/AdminVerifications'))
 const AdminReports = lazy(() => import('./pages/AdminReports'))
+const AdminReviews = lazy(() => import('./pages/AdminReviews'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 
@@ -96,6 +97,7 @@ const AnimatedRoutes = () => {
         <Route path="/admin" element={<Page><ProtectedRoute><AdminDashboard /></ProtectedRoute></Page>} />
         <Route path="/admin/verifications" element={<Page><ProtectedRoute><AdminVerifications /></ProtectedRoute></Page>} />
         <Route path="/admin/reports" element={<Page><ProtectedRoute><AdminReports /></ProtectedRoute></Page>} />
+        <Route path="/admin/reviews" element={<Page><ProtectedRoute><AdminReviews /></ProtectedRoute></Page>} />
 
         <Route path="*" element={<Page><NotFound /></Page>} />
       </Routes>
